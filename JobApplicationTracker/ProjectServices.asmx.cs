@@ -7,7 +7,7 @@ using MySql.Data;
 using MySql.Data.MySqlClient;
 using System.Data;
 
-namespace ProjectTemplate
+namespace JobApplicationTracker
 {
 	[WebService(Namespace = "http://tempuri.org/")]
 	[WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]

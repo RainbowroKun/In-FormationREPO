@@ -1,1 +1,1 @@
-﻿<%@ WebService Language="C#" CodeBehind="ProjectServices.asmx.cs" Class="ProjectTemplate.ProjectServices" %>
+﻿<%@ WebService Language="C#" CodeBehind="ProjectServices.asmx.cs" Class="JobApplicationTracker.ProjectServices" %>
