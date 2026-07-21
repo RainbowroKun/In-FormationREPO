@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Request an Account</title>
+</head>
+<body>
+    <main>
+        <h1>Request an Account</h1>
+
+        <p>
+            Complete the form below to request access to In Formation Jobs.
+        </p>
+
+        <!-- Form for Requesting an Account -->
+        <form id="accountRequestForm">
+            <div>
+                <label>First Name</label>
+                <input type="text"
+                       id="firstName"
+                       name="firstName"
+                       maxlength="25"
+                       required />
+            </div>
+
+            <div>
+                <label>Last Name</label>
+                <input type="text"
+                       id="lastName"
+                       name="lastName"
+                       maxlength="25"
+                       required />
+            </div>
+
+            <div>
+                <label>Email</label>
+                <input type="text"
+                       id="email"
+                       name="email"
+                       maxlength="50"
+                       required />
+            </div>
+
+            <div>
+                <label>Username</label>
+                <input type="text"
+                       id="username"
+                       name="username"
+                       maxlength="25"
+                       required />
+            </div>
+
+            <div>
+                <label>Password</label>
+                <input type="password"
+                       id="password"
+                       name="password"
+                       minlength="8"
+                       maxlength="50"
+                       required />
+            </div>
+            <small>
+                Password must be between 8 and 50 characters.
+            </small>
+            <!-- Confirming Password to ensure users typed password correctly -->
+            <div>
+                <label>Confirm Password</label>
+                <input type="password"
+                       id="confirmPassword"
+                       name="confirmPassword"
+                       minlength="8"
+                       maxlength="50"
+                       required />
+            </div>
+
+            <button type="submit">Submit Request</button>
+
+            <p id="formMessage"></p>
+        </form>
+    </main>
+
+    <script>
+        document
+            .getElementById("accountRequestForm")
+            .addEventListener("submit", function (request) {
+
+                event.preventDefault();
+
+                const password =
+                    document.getElementById("password").value;
+
+                const confirmPassword =
+                    document.getElementById("confirmPassword").value;
+
+                const formMessage =
+                    document.getElementById("formMessage");
+
+                if (password !== confirmPassword) {
+                    formMessage.textContent = "Passwords do not match.";
+                    return;
+                }
+
+                formMessage.textContent =
+                    "Thank you for submitting your account request. We will review your form as soon as possible."
+            });
+    </script>
+</body>
+</html>
