@@ -26,5 +26,5 @@ CREATE TABLE account_requests (
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (request_id),
+    PRIMARY KEY (request_id)
 );
