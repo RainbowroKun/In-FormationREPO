@@ -237,7 +237,44 @@ namespace JobApplicationTracker
 			}
 		}
 
+		[WebMethod(EnableSession = true)]
 
+		public string LogIn(string username, string password)
+		{
+    try
+    {
+        MySqlConnection con = new MySqlConnection(getConString());
+        con.Open();
+
+        string sql = "SELECT role FROM users WHERE username=@username AND pass=@password AND active_status=1";
+
+        MySqlCommand cmd = new MySqlCommand(sql, con);
+        cmd.Parameters.AddWithValue("@username", username);
+        cmd.Parameters.AddWithValue("@password", password);
+
+        MySqlDataReader reader = cmd.ExecuteReader();
+
+        if (reader.Read())
+        {
+            Session["username"] = username;
+            Session["role"] = reader["role"].ToString();
+
+            reader.Close();
+            con.Close();
+
+            return "Success";
+        }
+
+        reader.Close();
+        con.Close();
+
+        return "Invalid username or password.";
+    }
+    catch (Exception ex)
+    {
+        return ex.Message;
+    }
+	}	
 		[WebMethod(EnableSession = true)]
 		public string RejectAccountRequest(int requestId)
 		{

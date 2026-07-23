@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Log In</title>
+	<!--DO NOT FORGET THIS SCRIPT TAG SO YOU CAN USE JQUERY!!!!!-->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<!--YOUR OWN JAVASCRIPT CAN GO RIGHT HERE-->
+
+	<script type="text/javascript">
+		function TestButtonHandler() {
+			var webMethod = "ProjectServices.asmx/TestConnection";
+			var parameters = "{}";
+
+			//jQuery ajax method
+			$.ajax({
+				type: "POST",
+				url: webMethod,
+				data: parameters,
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				success: function (msg) {
+					var responseFromServer = msg.d;
+					alert(responseFromServer);
+				},
+				error: function (e) {
+					alert("this code will only execute if javascript is unable to access the webservice");
+				}
+			});
+		}
+                
+        function LogIn() {
+
+    var username = $("#username").val();
+    var password = $("#password").val();
+
+    var webMethod = "ProjectServices.asmx/LogIn";
+
+    var parameters = JSON.stringify({
+        username: username,
+        password: password
+    });
+
+    $.ajax({
+        type: "POST",
+        url: webMethod,
+        data: parameters,
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            if (msg.d == "Success") {
+                alert("Login successful.");
+            }
+            else {
+                alert(msg.d);
+            }
+
+        },
+
+        error: function () {
+            alert("Unable to connect to the server.");
+        }
+
+    });
+
+}
+
+    </script>
+    
+	<!--END OF YOUR OWN JAVASCRIPT-->
+
+	<!--AND YOUR OWN CSS CAN GO HERE AS WELL-->
+	<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #eef2f7;
+    margin: 0;
+}
+
+.container {
+    width: 350px;
+    margin: 100px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+h2 {
+    text-align: center;
+    color: #1f3c88;
+    margin-bottom: 25px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #1f3c88;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+button:hover {
+    background-color: #16316d;
+}
+	</style>
+	<!--END OF YOUR OWN CSS-->
+</head >
+<body>
+
+<div class="container">
+
+    <h2>Log In</h2>
+
+    <label for="username">Username</label>
+    <input type="text" id="username" />
+
+    <label for="password">Password</label>
+    <input type="password" id="password" />
+
+    <button onclick="javascript: LogIn();">
+        Log In
+    </button>
+
+    <p style="text-align:center; margin-top:15px;">
+    Don't have an account?
+    <a href="index.html">Create an Account</a>
+</p>
+
+</div>
+
+</body>
+</html >
