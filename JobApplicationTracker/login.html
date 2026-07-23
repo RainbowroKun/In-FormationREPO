@@ -52,16 +52,16 @@
         success: function (msg) {
 
             if (msg.d == "Success") {
-                alert("Login successful.");
+                $("#formMessage").text("Login successful.");
             }
             else {
-                alert(msg.d);
+                $("#formMessage").text(msg.d);
             }
 
         },
 
         error: function () {
-            alert("Unable to connect to the server.");
+            $("#formMessage").text("Unable to connect to the server.");
         }
 
     });
@@ -93,6 +93,11 @@ h2 {
     text-align: center;
     color: #1f3c88;
     margin-bottom: 25px;
+}
+
+#formMessage {
+    text-align: center;
+    color: #ef4444;
 }
 
 label {
@@ -129,26 +134,28 @@ button:hover {
 </head >
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h2>Log In</h2>
+        <h2>Log In</h2>
 
-    <label for="username">Username</label>
-    <input type="text" id="username" />
+        <label for="username">Username</label>
+        <input type="text" id="username" />
 
-    <label for="password">Password</label>
-    <input type="password" id="password" />
+        <label for="password">Password</label>
+        <input type="password" id="password" />
 
-    <button onclick="javascript: LogIn();">
-        Log In
-    </button>
+        <button onclick="javascript: LogIn();">
+            Log In
+        </button>
 
-    <p style="text-align:center; margin-top:15px;">
-    Don't have an account?
-    <a href="index.html">Create an Account</a>
-</p>
+        <p id="formMessage"></p>
 
-</div>
+        <p style="text-align:center; margin-top:15px;">
+            Don't have an account?
+            <a href="index.html">Create an Account</a>
+        </p>
+
+    </div>
 
 </body>
 </html >
