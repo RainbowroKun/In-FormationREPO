@@ -92,6 +92,7 @@
   <ItemGroup>
     <Content Include="Database\users_and_account_requests_table_creation.sql" />
     <Content Include="Global.asax" />
+    <Content Include="home-page.html" />
     <Content Include="index.html" />
     <Content Include="ProjectServices.asmx" />
     <Content Include="Web.config" />

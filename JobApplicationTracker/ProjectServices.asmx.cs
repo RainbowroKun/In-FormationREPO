@@ -273,5 +273,25 @@ namespace JobApplicationTracker
 				return "Unable to reject the request. Error: " + e.Message;
 			}
 		}
-	}
+
+        [WebMethod(EnableSession = true)]
+        public string GetCurrentUserRole()
+        {
+            if (Session["username"] == null)
+            {
+                return "Not Logged In";
+            }
+
+            string firstName = Session["firstName"].ToString();
+            string lastName = Session["lastName"].ToString();
+            string role = Session["role"].ToString();
+
+            role = char.ToUpper(role[0]) +
+				role.Substring(1).ToLower();
+
+            return firstName + " " + lastName + " | " + role;
+        }
+    }
+
 }
+
