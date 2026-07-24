@@ -36,6 +36,7 @@ CREATE TABLE application_documents (
     content_type VARCHAR(100) NOT NULL,
     file_size INT NOT NULL,
     file_data MEDIUMBLOB NOT NULL,
+    notes TEXT,
     uploaded_at TIMESTAMP
         NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +57,7 @@ CREATE TABLE recruiters (
     phone VARCHAR(25),
     follow_up_reminder_date DATE,
     last_contact_date DATE,
+    notes TEXT,
     created_at TIMESTAMP
         NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
