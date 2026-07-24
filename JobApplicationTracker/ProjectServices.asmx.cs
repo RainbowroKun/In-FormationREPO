@@ -130,7 +130,7 @@ namespace JobApplicationTracker
 					}
 				}
 
-				return "Account request submitted.";
+				return "Account request has been submitted. We will review the request as soon as we can!";
 			}
 			catch (Exception e)
 			{

@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Request an Account</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script type="text/javascript">
+        function TestButtonHandler() {
+            var webMethod = "ProjectServices.asmx/TestConnection";
+            var parameters = "{}";
+
+            $.ajax({
+                type: "POST",
+                url: webMethod,
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (msg) {
+                    var responseFromServer = msg.d;
+                    alert(responseFromServer);
+                },
+                error: function (e) {
+                    alert("this code will only execute if javascript is unable to access the webservice");
+                }
+            });
+        }
+
+        function CheckPasswordLength() {
+
+            var password = $("#password").val();
+
+            if (password.length > 0 && password.length < 8) {
+                $("#formMessage").text(
+                    "Password must be between 8 and 50 characters."
+                );
+            }
+            else {
+                $("#formMessage").text("");
+            }
+        }
+
+        function CheckPasswordsMatch() {
+
+            var password = $("#password").val();
+            var confirmPassword = $("#confirmPassword").val();
+
+            if (confirmPassword.length > 0 &&
+                password != confirmPassword) {
+
+                $("#formMessage").text(
+                    "Passwords do not match."
+                );
+            }
+            else {
+                $("#formMessage").text("");
+            }
+        }
+
+        function SubmitAccountRequest() {
+
+            var firstName = $("#firstName").val().trim();
+            var lastName = $("#lastName").val().trim();
+            var email = $("#email").val().trim();
+            var username = $("#username").val().trim();
+            var password = $("#password").val();
+
+            var webMethod = "ProjectServices.asmx/SubmitAccountRequest";
+
+            var parameters = JSON.stringify({
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                username: username,
+                password: password,
+            });
+
+            $.ajax({
+                type: "POST",
+                url: webMethod,
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    if (msg.d == "Success") {
+                        $("#formMessage").text(
+                            "Thank you for submitting your account request."
+                        );
+
+                        $("#accountRequestForm")[0].reset();
+                    }
+                    else {
+                        $("#formMessage").text(msg.d);
+                    }
+                },
+
+                error: function () {
+                    $("#formMessage").text(
+                        "Unable to connect to the server."
+                    );
+                }
+            });
+        }
+    </script>
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+        }
+
+        main {
+            width: 350px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+
+        h2 {
+            text-align: center;
+            color: #1f3c88;
+            margin-bottom: 25px;
+        }
+
+        #formMessage {
+            color: #ef4444;
+        }
+        
+        p {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #1f3c88;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+            button:hover {
+                background-color: #16316d;
+            }
+    </style>
+
+</head>
+<body>
+    <main>
+        <h2>Request an Account</h2>
+
+        <p>
+            Complete the form below to request access to In Formation Jobs.
+        </p>
+
+        <!-- Form for Requesting an Account -->
+        <form id="accountRequestForm">
+            <label>First Name</label>
+            <input type="text"
+                   id="firstName"
+                   name="firstName"
+                   maxlength="25"
+                   required />
+
+            <label>Last Name</label>
+            <input type="text"
+                   id="lastName"
+                   name="lastName"
+                   maxlength="25"
+                   required />
+
+            <label>Email</label>
+            <input type="text"
+                   id="email"
+                   name="email"
+                   maxlength="50"
+                   required />
+
+            <label>Username</label>
+            <input type="text"
+                   id="username"
+                   name="username"
+                   maxlength="25"
+                   required />
+
+            <label>Password</label>
+            <input type="password"
+                   id="password"
+                   name="password"
+                   minlength="8"
+                   maxlength="50"
+                   onblur="CheckPasswordLength();"
+                   required />
+
+            <!-- Confirming Password to ensure users typed password correctly -->
+
+            <label>Confirm Password</label>
+            <input type="password"
+                   id="confirmPassword"
+                   name="confirmPassword"
+                   minlength="8"
+                   maxlength="50"
+                   onblur="CheckPasswordsMatch();"
+                   required />
+
+
+            <button type="button" onclick="SubmitAccountRequest();">Submit Request</button>
+
+            <p id="formMessage"></p>
+
+            <p style="text-align:center; margin-top:15px;">
+                Already have an account?
+                <a href="login.html">Log In</a>
+            </p>
+        </form>
+    </main>
+</body>
+</html>
