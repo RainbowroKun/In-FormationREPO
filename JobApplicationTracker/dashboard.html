@@ -3,6 +3,8 @@
 <head>
     <title>Dashboard</title>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,8 +70,9 @@
 
     <h1>Job Application Dashboard</h1>
 
-    <button onclick="saveApplication()">Add Application</button>
+    <button onclick="addApplication()">Add Application</button>
     <p id="message"></p>
+
     <table>
         <tr>
             <th>Company</th>
@@ -92,6 +95,7 @@
                 </select>
             </td>
             <td>
+                <button onclick="saveApplication(this)">Save</button>
                 <button onclick="archiveApplication(this)">Archive</button>
                 <button onclick="this.closest('tr').remove()">Delete</button>
             </td>
@@ -116,6 +120,7 @@
                     "</select>" +
                 "</td>" +
                 "<td>" +
+                    "<button onclick=\"saveApplication(this)\">Save</button> " +
                     "<button onclick=\"archiveApplication(this)\">Archive</button> " +
                     "<button onclick=\"this.closest('tr').remove()\">Delete</button>" +
                 "</td>";
@@ -126,37 +131,37 @@
             row.remove();
         }
 
-        function saveApplication() {
-    var row = document.querySelector("table tr:nth-child(2)");
+        function saveApplication(button) {
+            var row = button.closest("tr");
 
-    var company = row.cells[0].querySelector("input").value;
-    var jobTitle = row.cells[1].querySelector("input").value;
-    var dateApplied = row.cells[2].querySelector("input").value;
-    var status = row.cells[3].querySelector("select").value;
+            var company = row.cells[0].querySelector("input").value;
+            var jobTitle = row.cells[1].querySelector("input").value;
+            var dateApplied = row.cells[2].querySelector("input").value;
+            var status = row.cells[3].querySelector("select").value;
 
-    var parameters = JSON.stringify({
-        company: company,
-        jobTitle: jobTitle,
-        dateApplied: dateApplied,
-        status: status
-    });
+            var parameters = JSON.stringify({
+                company: company,
+                jobTitle: jobTitle,
+                dateApplied: dateApplied,
+                status: status
+            });
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/AddJobApplication",
-        data: parameters,
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/AddJobApplication",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
-            $("#message").text(msg.d);
-        },
+                success: function (msg) {
+                    $("#message").text(msg.d);
+                },
 
-        error: function () {
-            $("#message").text("Unable to save application.");
+                error: function () {
+                    $("#message").text("Unable to save application.");
+                }
+            });
         }
-    });
-    }
     </script>
 
 </body>
