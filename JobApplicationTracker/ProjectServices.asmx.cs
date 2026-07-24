@@ -273,5 +273,53 @@ namespace JobApplicationTracker
 				return "Unable to reject the request. Error: " + e.Message;
 			}
 		}
+
+		[WebMethod(EnableSession = true)]
+public string AddJobApplication(string company, string jobTitle, string dateApplied, string status)
+{
+    try
+    {
+        if (Session["username"] == null)
+        {
+            return "Please log in first.";
+        }
+
+        string username = Session["username"].ToString();
+
+        MySqlConnection con = new MySqlConnection(getConString());
+        con.Open();
+
+        string sql =
+            "INSERT INTO job_applications " +
+            "(user_id, company, job_title, date_applied, status, archived) " +
+            "SELECT user_id, @company, @jobTitle, @dateApplied, @status, 0 " +
+            "FROM users WHERE username = @username";
+
+        MySqlCommand cmd = new MySqlCommand(sql, con);
+
+        cmd.Parameters.AddWithValue("@company", company);
+        cmd.Parameters.AddWithValue("@jobTitle", jobTitle);
+        cmd.Parameters.AddWithValue("@dateApplied", dateApplied);
+        cmd.Parameters.AddWithValue("@status", status);
+        cmd.Parameters.AddWithValue("@username", username);
+
+        int rowsAdded = cmd.ExecuteNonQuery();
+
+        con.Close();
+
+        if (rowsAdded == 0)
+        {
+            return "User was not found.";
+        }
+
+        return "Success";
+   	 }
+   	 catch (Exception ex)
+    	{
+        return ex.Message;
+   	 }
+	 
+	}	
+
 	}
 }
