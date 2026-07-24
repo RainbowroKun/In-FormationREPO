@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Google.Protobuf.WellKnownTypes;
+using MySql.Data;
+using MySql.Data.MySqlClient;
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Web;
 using System.Web.Services;
-using MySql.Data;
-using MySql.Data.MySqlClient;
-using System.Data;
 
 namespace JobApplicationTracker
 {
@@ -246,7 +247,7 @@ namespace JobApplicationTracker
         MySqlConnection con = new MySqlConnection(getConString());
         con.Open();
 
-        string sql = "SELECT role FROM users WHERE username=@username AND pass=@password AND active_status=1";
+        string sql = "    SELECT first_name, last_name, role FROM users WHERE username = @username AND pass = @password AND active_status = 1";
 
         MySqlCommand cmd = new MySqlCommand(sql, con);
         cmd.Parameters.AddWithValue("@username", username);
@@ -257,7 +258,9 @@ namespace JobApplicationTracker
         if (reader.Read())
         {
             Session["username"] = username;
-            Session["role"] = reader["role"].ToString();
+			Session["firstName"] = reader["first_name"].ToString();
+			Session["lastName"] = reader["last_name"].ToString();
+			Session["role"] = reader["role"].ToString();
 
             reader.Close();
             con.Close();
