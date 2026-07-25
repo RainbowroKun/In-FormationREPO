@@ -277,8 +277,19 @@ namespace JobApplicationTracker
     {
         return ex.Message;
     }
-	}	
-		[WebMethod(EnableSession = true)]
+	}
+
+        [WebMethod(EnableSession = true)]
+        public string LogOut()
+        {
+            Session.Clear();
+            Session.Abandon();
+
+            return "Success";
+        }
+
+
+        [WebMethod(EnableSession = true)]
 		public string RejectAccountRequest(int requestId)
 		{
 			try
