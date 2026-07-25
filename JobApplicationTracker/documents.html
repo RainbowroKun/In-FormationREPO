@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application Documents</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #eef4fb;
+        margin: 0;
+        padding: 0;
+        color: #111;
+    }
+
+    .page {
+        padding: 38px 52px;
+    }
+
+    h1,
+    h2 {
+        color: #24458f;
+    }
+
+    .card {
+        background-color: white;
+        border: 1px solid #dbe2ec;
+        border-radius: 10px;
+        padding: 24px;
+        margin-bottom: 22px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1.3fr 1.3fr auto;
+        gap: 28px;
+        align-items: end;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    label {
+        font-size: 15px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #111;
+    }
+
+    input,
+    select {
+        width: 100%;
+        height: 42px;
+        padding: 9px 12px;
+        border: 1px solid #cfd7e6;
+        border-radius: 5px;
+        background-color: white;
+        font-size: 14px;
+        color: #111;
+    }
+
+    input[type="file"] {
+        padding: 7px;
+    }
+
+    button {
+        height: 42px;
+        background-color: #24458f;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 0 22px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    #message {
+        margin: 14px 0 0;
+        color: #24458f;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        padding: 15px 14px;
+        border-bottom: 1px solid #dbe2ec;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    th {
+        color: #24458f;
+        background-color: #f3f6fb;
+        font-weight: bold;
+    }
+
+    td button {
+        height: 34px;
+        padding: 0 14px;
+        background-color: white;
+        color: #e12b2b;
+        border: 1px solid #ffb6b6;
+    }
+
+    @media (max-width: 900px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+</head>
+
+<body>
+
+<div class="page">
+
+    <h1>Application Documents</h1>
+
+    <div class="card">
+        <div class="form-row">
+
+            <div class="field">
+                <label>Document Type</label>
+                <select id="documentType">
+                    <option value="" selected disabled>Select document type</option>
+                    <option>Resume</option>
+                    <option>Cover Letter</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>File</label>
+                <input type="file" id="documentFile">
+            </div>
+
+            <div class="field">
+                <label>Description</label>
+                <input type="text" id="documentDescription" placeholder="Enter a description">
+            </div>
+
+            <button onclick="uploadDocument()">Upload Document</button>
+
+        </div>
+
+        <p id="message"></p>
+    </div>
+
+    <div class="card">
+        <h2>Uploaded Documents</h2>
+
+        <table id="documentsTable">
+            <tr>
+                <th>Document Name</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>File Size</th>
+                <th>Uploaded On</th>
+                <th>Actions</th>
+            </tr>
+        </table>
+    </div>
+
+</div>
+
+<script>
+  function uploadDocument() {
+    var type = document.getElementById("documentType").value;
+    var fileInput = document.getElementById("documentFile");
+    var description = document.getElementById("documentDescription").value;
+    var message = document.getElementById("message");
+
+    if (type === "") {
+        message.innerText = "Please select a document type.";
+        return;
+    }
+
+    if (fileInput.files.length === 0) {
+        message.innerText = "Please choose a file.";
+        return;
+    }
+
+    var file = fileInput.files[0];
+    var reader = new FileReader();
+
+    reader.onload = function () {
+        var fileData = reader.result.split(",")[1];
+
+        var parameters = JSON.stringify({
+            applicationId: 1,
+            documentType: type,
+            fileName: file.name,
+            contentType: file.type || "application/octet-stream",
+            fileSize: file.size,
+            fileData: fileData,
+            notes: description
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "ProjectServices.asmx/UploadApplicationDocument",
+            data: parameters,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+
+            success: function (msg) {
+                if (msg.d === "Success") {
+                    addDocumentToTable(file, type, description);
+
+                    message.innerText = "Document uploaded.";
+                    document.getElementById("documentType").value = "";
+                    fileInput.value = "";
+                    document.getElementById("documentDescription").value = "";
+                }
+                else {
+                    message.innerText = msg.d;
+                }
+            },
+
+            error: function () {
+                message.innerText = "Unable to connect to the upload service.";
+            }
+        });
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function addDocumentToTable(file, type, description) {
+    var table = document.getElementById("documentsTable");
+    var row = table.insertRow();
+
+    row.innerHTML =
+        "<td>" + file.name + "</td>" +
+        "<td>" + type + "</td>" +
+        "<td>" + description + "</td>" +
+        "<td>" + Math.round(file.size / 1024) + " KB</td>" +
+        "<td>" + new Date().toLocaleDateString() + "</td>" +
+        "<td><button onclick=\"this.closest('tr').remove()\">Delete</button></td>";
+}
+</script>
+
+</body>
+</html>

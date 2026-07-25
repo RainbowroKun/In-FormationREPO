@@ -342,6 +342,105 @@ namespace JobApplicationTracker
 
             return firstName + " " + lastName + " | " + role;
         }
+		        [WebMethod(EnableSession = true)]
+        public string UploadApplicationDocument(
+            int applicationId,
+            string documentType,
+            string fileName,
+            string contentType,
+            int fileSize,
+            string fileData,
+            string notes)
+        {
+            if (Session["username"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (string.IsNullOrWhiteSpace(documentType) ||
+                string.IsNullOrWhiteSpace(fileName) ||
+                string.IsNullOrWhiteSpace(fileData))
+            {
+                return "Please select a document type and file.";
+            }
+
+            try
+            {
+                byte[] documentBytes = Convert.FromBase64String(fileData);
+                string username = Session["username"].ToString();
+
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        INSERT INTO application_documents
+                        (
+                            application_id,
+                            document_type,
+                            file_name,
+                            content_type,
+                            file_size,
+                            file_data,
+                            notes
+                        )
+                        SELECT
+                            a.application_id,
+                            @documentType,
+                            @fileName,
+                            @contentType,
+                            @fileSize,
+                            @fileData,
+                            @notes
+                        FROM applications a
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE a.application_id = @applicationId
+                          AND u.username = @username;";
+
+                    using (MySqlCommand cmd =
+                        new MySqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@applicationId", applicationId);
+                        cmd.Parameters.AddWithValue(
+                            "@documentType", documentType);
+                        cmd.Parameters.AddWithValue(
+                            "@fileName", fileName);
+                        cmd.Parameters.AddWithValue(
+                            "@contentType", contentType);
+                        cmd.Parameters.AddWithValue(
+                            "@fileSize", fileSize);
+                        cmd.Parameters.AddWithValue(
+                            "@fileData", documentBytes);
+                        cmd.Parameters.AddWithValue(
+                            "@notes", notes ?? "");
+                        cmd.Parameters.AddWithValue(
+                            "@username", username);
+
+                        int rowsAdded = cmd.ExecuteNonQuery();
+
+                        if (rowsAdded == 0)
+                        {
+                            return "Application was not found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (FormatException)
+            {
+                return "The selected file could not be processed.";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to upload document. Error: " +
+                    ex.Message;
+            }
+        }
+	
     }
 
 }
