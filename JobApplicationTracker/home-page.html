@@ -61,7 +61,7 @@
                 },
 
                 error: function () {
-                    $("#pageMessage").text(
+                    $("#formMessage").text(
                         "Unable to load your account information."
                     );
                 }
@@ -185,10 +185,19 @@
             font-weight: bold;
         }
 
-        #pageMessage {
-            color: #ef4444;
-            font-weight: bold;
+        #formMessage {
+            min-height: 22px;
+            margin: 20px 0 0;
             text-align: center;
+            font-weight: bold;
+        }
+
+        .errorMessage {
+            color: #ef4444;
+        }
+
+        .successMessage {
+            color: #1f3c88;
         }
     </style>
 </head>
@@ -234,7 +243,7 @@
 
     <main>
 
-        <p id="pageMessage"></p>
+        <p id="formMessage"></p>
 
         <!-- Options available to every logged-in user. -->
         <section id="userOptions">
@@ -256,7 +265,7 @@
                 </a>
 
                 <a class="optionCard"
-                   href="#">
+                   href="add-application.html">
                     <h3>Add Application</h3>
 
                     <p>
@@ -264,7 +273,6 @@
                         and current status.
                     </p>
 
-                    <span class="comingSoon">Coming Soon</span>
                 </a>
 
                 <a class="optionCard"
