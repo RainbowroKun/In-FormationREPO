@@ -1,0 +1,971 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="description"
+          content="Add and track a new job application." />
+
+    <title>Add Application - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js?v=2"></script>
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            LoadAccountInformation();
+        });
+
+
+        function ShowError(message) {
+
+            $("#formMessage")
+                .removeClass("successMessage")
+                .addClass("errorMessage")
+                .text(message);
+        }
+
+        function ShowSuccess(message) {
+
+            $("#formMessage")
+                .removeClass("errorMessage")
+                .addClass("successMessage")
+                .text(message);
+        }
+
+        function ReadFile(file) {
+
+            return new Promise(function (resolve, reject) {
+
+                if (!file) {
+                    resolve({
+                        fileName: "",
+                        contentType: "",
+                        base64: ""
+                    });
+
+                    return;
+                }
+
+                var maximumFileSize = 5 * 1024 * 1024;
+
+                if (file.size > maximumFileSize) {
+                    reject(
+                        new Error(
+                            file.name +
+                            " is larger than the 5 MB limit."
+                        )
+                    );
+
+                    return;
+                }
+
+                var reader = new FileReader();
+
+                reader.onload = function (event) {
+
+                    var fileResult = event.target.result;
+                    var base64 = fileResult.split(",")[1];
+
+                    resolve({
+                        fileName: file.name,
+                        contentType: file.type,
+                        base64: base64
+                    });
+                };
+
+                reader.onerror = function () {
+                    reject(
+                        new Error(
+                            "Unable to read " + file.name + "."
+                        )
+                    );
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function SaveApplication() {
+
+            var form =
+                document.getElementById("applicationForm");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            $("#formMessage")
+                .removeClass("errorMessage successMessage")
+                .text("");
+
+            var recruiterFirstName =
+                $("#recruiterFirstName").val().trim();
+
+            var recruiterLastName =
+                $("#recruiterLastName").val().trim();
+
+            var recruiterEmail =
+                $("#recruiterEmail").val().trim();
+
+            var recruiterPhone =
+                $("#recruiterPhone").val().trim();
+
+            var recruiterFollowUpDate =
+                $("#recruiterFollowUpDate").val();
+
+            var recruiterLastContactDate =
+                $("#recruiterLastContactDate").val();
+
+            var recruiterNotes =
+                $("#recruiterNotes").val().trim();
+
+            var hasRecruiterInformation =
+                recruiterFirstName != "" ||
+                recruiterLastName != "" ||
+                recruiterEmail != "" ||
+                recruiterPhone != "" ||
+                recruiterFollowUpDate != "" ||
+                recruiterLastContactDate != "" ||
+                recruiterNotes != "";
+
+            /*
+                The recruiters table requires first name,
+                last name, company, and email.
+
+                Company comes from the application's company name.
+            */
+            if (hasRecruiterInformation &&
+                (recruiterFirstName == "" ||
+                    recruiterLastName == "" ||
+                    recruiterEmail == "")) {
+
+                ShowError(
+                    "Complete the recruiter's first name, " +
+                    "last name, and email, or leave the " +
+                    "recruiter section blank."
+                );
+
+                return;
+            }
+
+            var resumeFile =
+                $("#resumeFile")[0].files[0];
+
+            var coverLetterFile =
+                $("#coverLetterFile")[0].files[0];
+
+            $("#saveApplicationButton")
+                .prop("disabled", true)
+                .text("Saving...");
+
+            try {
+
+                var files = await Promise.all([
+                    ReadFile(resumeFile),
+                    ReadFile(coverLetterFile)
+                ]);
+
+                var resume = files[0];
+                var coverLetter = files[1];
+
+                var parameters = JSON.stringify({
+
+                    companyName:
+                        $("#companyName").val().trim(),
+
+                    jobTitle:
+                        $("#jobTitle").val().trim(),
+
+                    location:
+                        $("#location").val().trim(),
+
+                    dateApplied:
+                        $("#dateApplied").val(),
+
+                    applicationStatus:
+                        $("#applicationStatus").val(),
+
+                    jobPostingUrl:
+                        $("#jobPostingUrl").val().trim(),
+
+                    followUpDate:
+                        $("#followUpDate").val(),
+
+                    applicationNotes:
+                        $("#applicationNotes").val().trim(),
+
+                    recruiterFirstName:
+                        recruiterFirstName,
+
+                    recruiterLastName:
+                        recruiterLastName,
+
+                    recruiterEmail:
+                        recruiterEmail,
+
+                    recruiterPhone:
+                        recruiterPhone,
+
+                    recruiterFollowUpDate:
+                        recruiterFollowUpDate,
+
+                    recruiterLastContactDate:
+                        recruiterLastContactDate,
+
+                    recruiterNotes:
+                        recruiterNotes,
+
+                    resumeFileName:
+                        resume.fileName,
+
+                    resumeContentType:
+                        resume.contentType,
+
+                    resumeBase64:
+                        resume.base64,
+
+                    resumeNotes:
+                        $("#resumeNotes").val().trim(),
+
+                    coverLetterFileName:
+                        coverLetter.fileName,
+
+                    coverLetterContentType:
+                        coverLetter.contentType,
+
+                    coverLetterBase64:
+                        coverLetter.base64,
+
+                    coverLetterNotes:
+                        $("#coverLetterNotes").val().trim()
+                });
+
+                $.ajax({
+                    type: "POST",
+                    url: "ProjectServices.asmx/AddApplication",
+                    data: parameters,
+                    contentType:
+                        "application/json; charset=utf-8",
+                    dataType: "json",
+
+                    success: function (msg) {
+
+                        if (msg.d == "Success") {
+
+                            ShowSuccess(
+                                "Application saved successfully."
+                            );
+
+                            $("#applicationForm")[0].reset();
+                        }
+                        else {
+                            ShowError(msg.d);
+                        }
+
+                        ResetSaveButton();
+                    },
+
+                    error: function (xhr) {
+
+                        console.log(xhr.responseText);
+
+                        ShowError(
+                            "Unable to save the application. " +
+                            "Check the browser console."
+                        );
+
+                        ResetSaveButton();
+                    }
+                });
+            }
+            catch (error) {
+
+                ShowError(error.message);
+                ResetSaveButton();
+            }
+        }
+
+        function ResetSaveButton() {
+
+            $("#saveApplicationButton")
+                .prop("disabled", false)
+                .text("Save Application");
+        }
+
+        function CancelApplication() {
+            window.location.href = "home-page.html";
+        }
+
+    </script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            color: #1f2937;
+        }
+
+        /* Same header structure and colors as the homepage. */
+        header {
+            background-color: #1f3c88;
+            color: white;
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            header h1 {
+                margin: 0 0 6px 0;
+            }
+
+            header p {
+                margin: 0;
+            }
+
+        .accountArea {
+            text-align: right;
+        }
+
+        #welcomeMessage {
+            display: block;
+            margin-bottom: 8px;
+            text-transform: capitalize;
+            font-weight: bold;
+        }
+
+        #signedInArea {
+            display: none;
+        }
+
+        .accountLink {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+            .accountLink:hover {
+                text-decoration: underline;
+            }
+
+        .pageWrapper {
+            max-width: 1220px;
+            margin: 0 auto;
+            padding: 22px 30px 45px;
+        }
+
+        .pageNav {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+
+            .pageNav a {
+                color: #2563eb;
+                text-decoration: none;
+            }
+
+                .pageNav a:hover {
+                    text-decoration: underline;
+                }
+
+        .formCard {
+            padding: 32px 38px 24px;
+            background-color: white;
+            border-radius: 9px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.13);
+        }
+
+        .formHeading {
+            margin-bottom: 26px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #d8dee8;
+        }
+
+            .formHeading h2 {
+                margin: 0 0 8px 0;
+                color: #0f172a;
+                font-size: 36px;
+            }
+
+            .formHeading p {
+                margin: 0;
+                color: #64748b;
+            }
+
+        .formSection {
+            margin-top: 28px;
+        }
+
+            .formSection:first-of-type {
+                margin-top: 0;
+            }
+
+        .sectionHeading {
+            margin: 0 0 18px 0;
+            padding-bottom: 9px;
+            border-bottom: 1px solid #d8dee8;
+            color: #1f3c88;
+            font-size: 21px;
+        }
+
+        .sectionDescription {
+            margin: -9px 0 18px 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .formGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 22px;
+        }
+
+        .formField {
+            min-width: 0;
+        }
+
+        .fullWidth {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background-color: white;
+            color: #1f2937;
+            font-family: inherit;
+            font-size: 15px;
+        }
+
+            input:focus,
+            select:focus,
+            textarea:focus {
+                border-color: #2563eb;
+                outline: 2px solid rgba(37, 99, 235, 0.15);
+            }
+
+            input::placeholder,
+            textarea::placeholder {
+                color: #94a3b8;
+            }
+
+            input[type="file"] {
+                padding: 8px;
+                background-color: #f8fafc;
+            }
+
+        textarea {
+            min-height: 95px;
+            resize: vertical;
+        }
+
+        .formActions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 14px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #d8dee8;
+        }
+
+        .primaryButton,
+        .secondaryButton {
+            min-width: 145px;
+            padding: 12px 20px;
+            border-radius: 5px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .primaryButton {
+            border: 1px solid #1556d8;
+            background-color: #1556d8;
+            color: white;
+        }
+
+            .primaryButton:hover {
+                background-color: #1045b1;
+            }
+
+            .primaryButton:disabled {
+                background-color: #94a3b8;
+                border-color: #94a3b8;
+                cursor: not-allowed;
+            }
+
+        .secondaryButton {
+            border: 1px solid #cbd5e1;
+            background-color: white;
+            color: #475569;
+        }
+
+            .secondaryButton:hover {
+                background-color: #f1f5f9;
+            }
+
+        #formMessage {
+            min-height: 22px;
+            margin: 20px 0 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .errorMessage {
+            color: #ef4444;
+        }
+
+        .successMessage {
+            color: #1f3c88;
+        }
+
+        @media screen and (max-width: 750px) {
+
+            header {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .accountArea {
+                text-align: left;
+            }
+
+            .pageWrapper {
+                padding: 18px 15px 35px;
+            }
+
+            .formCard {
+                padding: 24px 20px;
+            }
+
+            .formGrid {
+                grid-template-columns: 1fr;
+            }
+
+            .fullWidth {
+                grid-column: auto;
+            }
+
+            .formActions {
+                flex-direction: column;
+            }
+
+            .primaryButton,
+            .secondaryButton {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+
+        <div>
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <span>Add Application</span>
+
+        </nav>
+
+        <main class="formCard">
+
+            <div class="formHeading">
+
+                <h2>Add Application</h2>
+
+                <p>
+                    Record a new job application and keep all
+                    related information in one place.
+                </p>
+
+            </div>
+
+            <form id="applicationForm">
+
+                <!-- Saves into applications. -->
+                <section class="formSection">
+
+                    <h3 class="sectionHeading">
+                        Application Information
+                    </h3>
+
+                    <div class="formGrid">
+
+                        <div class="formField">
+
+                            <label for="companyName">
+                                Company Name *
+                            </label>
+
+                            <input type="text"
+                                   id="companyName"
+                                   maxlength="100"
+                                   placeholder="Enter company name"
+                                   required />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="jobTitle">
+                                Job Title *
+                            </label>
+
+                            <input type="text"
+                                   id="jobTitle"
+                                   maxlength="100"
+                                   placeholder="Enter job title"
+                                   required />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="location">
+                                Location
+                            </label>
+
+                            <input type="text"
+                                   id="location"
+                                   maxlength="100"
+                                   placeholder="City, State or Remote" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="dateApplied">
+                                Date Applied *
+                            </label>
+
+                            <input type="date"
+                                   id="dateApplied"
+                                   required />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="applicationStatus">
+                                Application Status *
+                            </label>
+
+                            <select id="applicationStatus"
+                                    required>
+
+                                <option value="Applied">
+                                    Applied
+                                </option>
+
+                                <option value="Interview">
+                                    Interview
+                                </option>
+
+                                <option value="Offer">
+                                    Offer
+                                </option>
+
+                                <option value="Rejected">
+                                    Rejected
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="jobPostingUrl">
+                                Job Posting URL
+                            </label>
+
+                            <input type="url"
+                                   id="jobPostingUrl"
+                                   maxlength="500"
+                                   placeholder="https://" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="followUpDate">
+                                Application Follow-Up Date
+                            </label>
+
+                            <input type="date"
+                                   id="followUpDate" />
+
+                        </div>
+
+                        <div class="formField fullWidth">
+
+                            <label for="applicationNotes">
+                                Application / Interview Notes
+                            </label>
+
+                            <textarea id="applicationNotes"
+                                      placeholder="Add application notes, interview feedback, contact history, and next steps."></textarea>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <!-- Saves into recruiters. -->
+                <section class="formSection">
+
+                    <h3 class="sectionHeading">
+                        Recruiter Information
+                    </h3>
+
+                    <p class="sectionDescription">
+                        Optional. Leave the entire section blank when
+                        no recruiter is known.
+                    </p>
+
+                    <div class="formGrid">
+
+                        <div class="formField">
+
+                            <label for="recruiterFirstName">
+                                Recruiter First Name
+                            </label>
+
+                            <input type="text"
+                                   id="recruiterFirstName"
+                                   maxlength="50"
+                                   placeholder="Enter first name" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="recruiterLastName">
+                                Recruiter Last Name
+                            </label>
+
+                            <input type="text"
+                                   id="recruiterLastName"
+                                   maxlength="50"
+                                   placeholder="Enter last name" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="recruiterEmail">
+                                Recruiter Email
+                            </label>
+
+                            <input type="email"
+                                   id="recruiterEmail"
+                                   maxlength="100"
+                                   placeholder="Enter recruiter email" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="recruiterPhone">
+                                Recruiter Phone
+                            </label>
+
+                            <input type="tel"
+                                   id="recruiterPhone"
+                                   maxlength="25"
+                                   placeholder="Enter phone number" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="recruiterFollowUpDate">
+                                Recruiter Follow-Up Reminder
+                            </label>
+
+                            <input type="date"
+                                   id="recruiterFollowUpDate" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="recruiterLastContactDate">
+                                Last Contact Date
+                            </label>
+
+                            <input type="date"
+                                   id="recruiterLastContactDate" />
+
+                        </div>
+
+                        <div class="formField fullWidth">
+
+                            <label for="recruiterNotes">
+                                Recruiter Notes
+                            </label>
+
+                            <textarea id="recruiterNotes"
+                                      placeholder="Add communication notes, recruiter preferences, or next steps."></textarea>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <!-- Saves into application_documents. -->
+                <section class="formSection">
+
+                    <h3 class="sectionHeading">
+                        Application Documents
+                    </h3>
+
+                    <p class="sectionDescription">
+                        Optional. PDF, DOC, and DOCX files up to
+                        5 MB each.
+                    </p>
+
+                    <div class="formGrid">
+
+                        <div class="formField">
+
+                            <label for="resumeFile">
+                                Resume Attachment
+                            </label>
+
+                            <input type="file"
+                                   id="resumeFile"
+                                   accept=".pdf,.doc,.docx" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="resumeNotes">
+                                Resume Notes
+                            </label>
+
+                            <input type="text"
+                                   id="resumeNotes"
+                                   placeholder="Version or purpose of this resume" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="coverLetterFile">
+                                Cover Letter Attachment
+                            </label>
+
+                            <input type="file"
+                                   id="coverLetterFile"
+                                   accept=".pdf,.doc,.docx" />
+
+                        </div>
+
+                        <div class="formField">
+
+                            <label for="coverLetterNotes">
+                                Cover Letter Notes
+                            </label>
+
+                            <input type="text"
+                                   id="coverLetterNotes"
+                                   placeholder="Notes about this cover letter" />
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <p id="formMessage"></p>
+
+                <div class="formActions">
+
+                    <button type="button"
+                            id="saveApplicationButton"
+                            class="primaryButton"
+                            onclick="SaveApplication();">
+                        Save Application
+                    </button>
+
+                    <button type="button"
+                            class="secondaryButton"
+                            onclick="CancelApplication();">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </form>
+
+        </main>
+
+    </div>
+
+</body>
+</html>
