@@ -1,4 +1,27 @@
-﻿function LogOut() {
+﻿function ShowPageMessage(message, messageType) {
+
+    var pageMessage = $("#pageMessage");
+
+    pageMessage
+        .removeClass("errorMessage successMessage")
+        .text(message);
+
+    if (messageType == "success") {
+        pageMessage.addClass("successMessage");
+    }
+    else if (messageType == "error") {
+        pageMessage.addClass("errorMessage");
+    }
+}
+
+
+function ClearPageMessage() {
+
+    $("#pageMessage")
+        .removeClass("errorMessage successMessage")
+        .text("");
+}
+function LogOut() {
 
     $.ajax({
         type: "POST",

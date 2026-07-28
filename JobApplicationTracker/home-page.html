@@ -71,12 +71,6 @@
     </script>
 
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #eef2f7;
-            margin: 0;
-            color: #1f2937;
-        }
 
         header {
             background-color: #1f3c88;
@@ -96,30 +90,21 @@
             }
 
         .accountArea {
-            text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 18px;
         }
 
         #welcomeMessage {
-            display: block;
-            margin-bottom: 8px;
-            text-transform: capitalize;
+            margin: 0;
             font-weight: bold;
+            text-transform: capitalize;
         }
 
         #signedOutArea,
         #signedInArea {
             display: none;
         }
-
-        .accountLink {
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-            .accountLink:hover {
-                text-decoration: underline;
-            }
 
         .linkDivider {
             margin: 0 6px;
@@ -184,21 +169,6 @@
             font-size: 12px;
             font-weight: bold;
         }
-
-        #formMessage {
-            min-height: 22px;
-            margin: 20px 0 0;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .errorMessage {
-            color: #ef4444;
-        }
-
-        .successMessage {
-            color: #1f3c88;
-        }
     </style>
 </head>
 
@@ -243,7 +213,7 @@
 
     <main>
 
-        <p id="formMessage"></p>
+        <p id="pageMessage"></p>
 
         <!-- Options available to every logged-in user. -->
         <section id="userOptions">

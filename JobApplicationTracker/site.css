@@ -1,0 +1,238 @@
+﻿/* Basic site layout */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: #eef2f7;
+    color: #1f2937;
+    font-family: Arial, sans-serif;
+}
+
+
+/* Header */
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 40px;
+    background-color: #1f3c88;
+    color: white;
+}
+
+    header h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+    }
+
+    header p {
+        margin: 0;
+    }
+
+.accountArea {
+    text-align: right;
+}
+
+#welcomeMessage {
+    margin: 0 0 8px;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+#signedInArea {
+    display: none;
+}
+
+.accountLink {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+    .accountLink:hover {
+        text-decoration: underline;
+    }
+
+
+/* Standard page layout */
+
+.pageWrapper {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 22px 38px 50px;
+}
+
+.pageNav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+    font-size: 15px;
+}
+
+    .pageNav a {
+        color: #2563eb;
+        text-decoration: none;
+    }
+
+        .pageNav a:hover {
+            text-decoration: underline;
+        }
+
+
+/* Shared form fields */
+
+.formField {
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+    .formField label {
+        display: block;
+        margin-bottom: 7px;
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .formField input,
+    .formField select,
+    .formField textarea {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background-color: white;
+        color: #1f2937;
+        font-family: inherit;
+        font-size: 15px;
+    }
+
+        .formField input:focus,
+        .formField select:focus,
+        .formField textarea:focus {
+            border-color: #2563eb;
+            outline: 2px solid rgba(37, 99, 235, 0.15);
+        }
+
+        .formField input::placeholder,
+        .formField textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        .formField input[type="file"] {
+            padding: 8px;
+            background-color: #f8fafc;
+        }
+
+    .formField textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+
+/* Shared buttons */
+
+.primaryButton,
+.secondaryButton {
+    padding: 12px 20px;
+    border-radius: 5px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: 1px solid #1556d8;
+    background-color: #1556d8;
+    color: white;
+}
+
+    .primaryButton:hover {
+        background-color: #1045b1;
+    }
+
+    .primaryButton:disabled {
+        border-color: #94a3b8;
+        background-color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+.secondaryButton {
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    color: #475569;
+}
+
+.requiredMark {
+    color: #dc2626;
+}
+
+    .secondaryButton:hover {
+        background-color: #f1f5f9;
+    }
+
+
+/* Login and account-request pages */
+
+.centeredPage {
+    width: 100%;
+    max-width: 470px;
+    margin: 70px auto;
+    padding: 0 20px;
+}
+
+.centeredFormCard {
+    padding: 32px;
+    border-radius: 9px;
+    background-color: white;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.13);
+}
+
+    .centeredFormCard h2 {
+        margin: 0 0 10px;
+        color: #1f3c88;
+        text-align: center;
+        font-size: 30px;
+    }
+
+    .centeredFormCard .primaryButton {
+        width: 100%;
+    }
+
+.formDescription {
+    margin: 0 0 24px;
+    color: #64748b;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.formFooter {
+    margin: 18px 0 0;
+    text-align: center;
+}
+
+
+/* Messages */
+
+#pageMessage {
+    margin: 18px 0 0;
+    text-align: center;
+    font-weight: bold;
+}
+
+    #pageMessage:empty {
+        display: none;
+    }
+
+.errorMessage {
+    color: #dc2626;
+}
+
+.successMessage {
+    color: #15803d;
+}
