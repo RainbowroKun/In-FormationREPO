@@ -10,7 +10,7 @@
         success: function (msg) {
 
             if (msg.d == "Success") {
-                window.location.href = "home-page.html";
+                window.location.href = "login.html";
             }
             else {
                 alert("Unable to log out.");
