@@ -10,6 +10,7 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css">
 
     <script type="text/javascript">
 
@@ -18,16 +19,16 @@
         });
 
         function LoadHomePage() {
-
-            var webMethod =
-                "ProjectServices.asmx/GetCurrentUserRole";
-
-            var parameters = "{}";
+            // Hide everything before deciding what to show.
+            $("#signedOutArea").hide();
+            $("#signedInArea").hide();
+            $("#userOptions").hide();
+            $("#adminOptions").hide();
 
             $.ajax({
                 type: "POST",
-                url: webMethod,
-                data: parameters,
+                url: "ProjectServices.asmx/GetCurrentUserRole",
+                data: "{}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
 
@@ -35,18 +36,14 @@
 
                     var userInfo = msg.d;
 
-                    // Hide everything before deciding what to show.
-                    $("#signedOutArea").hide();
-                    $("#signedInArea").hide();
-                    $("#userOptions").hide();
-                    $("#adminOptions").hide();
-
                     $("#welcomeMessage").text(userInfo);
 
                     if (userInfo == "Not Logged In") {
                         $("#signedOutArea").show();
                         return;
                     }
+
+                    $("#welcomeMessage").text(userInfo);
 
                     $("#signedInArea").show();
                     $("#userOptions").show();
@@ -60,10 +57,11 @@
 
                 },
 
-                error: function () {
-                    $("#formMessage").text(
-                        "Unable to load your account information."
-                    );
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+
+                    ShowPageMessage("Unable to load your account information.","error");
+                    $("#signedOutArea").show()
                 }
             });
         }
@@ -71,38 +69,9 @@
     </script>
 
     <style>
-
-        header {
-            background-color: #1f3c88;
-            color: white;
-            padding: 24px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-            header h1 {
-                margin: 0 0 6px 0;
-            }
-
-            header p {
-                margin: 0;
-            }
-
-        .accountArea {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-
-        #welcomeMessage {
-            margin: 0;
-            font-weight: bold;
-            text-transform: capitalize;
-        }
-
         #signedOutArea,
-        #signedInArea {
+        #userOptions,
+        #adminOptions {
             display: none;
         }
 
@@ -110,20 +79,22 @@
             margin: 0 6px;
         }
 
-        main {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 0 20px;
+        .homePage {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 36px 25px 50px;
         }
 
-        section {
+        .homeSection {
             margin-bottom: 40px;
         }
 
-            section h2 {
-                color: #1f3c88;
-                border-bottom: 2px solid #d7deea;
+            .homeSection h2 {
+                margin: 0 0 20px;
                 padding-bottom: 10px;
+                border-bottom: 2px solid #d7deea;
+                color: #1f3c88;
             }
 
         .cardGrid {
@@ -135,27 +106,26 @@
         .optionCard {
             display: block;
             padding: 22px;
-            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
-            text-decoration: none;
+            background-color: white;
             color: #1f2937;
+            text-decoration: none;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
             .optionCard:hover {
                 transform: translateY(-3px);
-                box-shadow: 0 5px 14px rgba(0,0,0,0.18);
+                box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
             }
 
             .optionCard h3 {
+                margin: 0 0 8px;
                 color: #1f3c88;
-                margin-top: 0;
-                margin-bottom: 8px;
             }
 
             .optionCard p {
-                margin-bottom: 0;
+                margin: 0;
                 line-height: 1.4;
             }
 
@@ -163,12 +133,20 @@
             display: inline-block;
             margin-top: 12px;
             padding: 4px 8px;
-            background-color: #eef2f7;
             border-radius: 4px;
+            background-color: #eef2f7;
             color: #4b5563;
             font-size: 12px;
             font-weight: bold;
         }
+
+        .adminCard {
+            border: 1px dashed #7c3aed;
+        }
+
+            .adminCard h3 {
+                color: #7c3aed;
+            }
     </style>
 </head>
 
@@ -211,12 +189,12 @@
         </div>
     </header>
 
-    <main>
+    <main class="homePage">
 
         <p id="pageMessage"></p>
 
         <!-- Options available to every logged-in user. -->
-        <section id="userOptions">
+        <section id="userOptions" class="homeSection">
 
             <h2>My Job Search</h2>
 
@@ -246,15 +224,13 @@
                 </a>
 
                 <a class="optionCard"
-                   href="#">
+                   href="view-applications.html">
                     <h3>View Applications</h3>
 
                     <p>
                         Review, edit, archive, or delete saved job
                         applications.
                     </p>
-
-                    <span class="comingSoon">Coming Soon</span>
                 </a>
 
                 <a class="optionCard"
@@ -309,13 +285,13 @@
         </section>
 
         <!-- This entire section only appears for administrators. -->
-        <section id="adminOptions">
+        <section id="adminOptions" class="homeSection">
 
             <h2>Administration</h2>
 
             <div class="cardGrid">
 
-                <a class="optionCard"
+                <a class="optionCard adminCard"
                    href="#">
                     <h3>Review Account Requests</h3>
 
@@ -327,7 +303,7 @@
                     <span class="comingSoon">Admin Only</span>
                 </a>
 
-                <a class="optionCard"
+                <a class="optionCard adminCard"
                    href="#">
                     <h3>Manage Users</h3>
 
@@ -339,7 +315,7 @@
                     <span class="comingSoon">Admin Only</span>
                 </a>
 
-                <a class="optionCard"
+                <a class="optionCard adminCard"
                    href="#">
                     <h3>Administrative Reports</h3>
 
@@ -352,6 +328,7 @@
                 </a>
 
             </div>
+
         </section>
 
     </main>

@@ -4,8 +4,10 @@ using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Transactions;
 using System.Web;
 using System.Web.Services;
 
@@ -359,6 +361,9 @@ namespace JobApplicationTracker
             return firstName + " " + lastName + " | " + role;
         }
 
+        ////////////////////////////////////////////////////////////////////////
+        /// Add Application
+        ////////////////////////////////////////////////////////////////////////
         [WebMethod(EnableSession = true)]
         public string AddApplication(
             string companyName,
@@ -654,22 +659,27 @@ namespace JobApplicationTracker
                         InsertApplicationDocument(
                             con,
                             transaction,
+                            userId,
                             applicationId,
                             "Resume",
                             resumeFileName,
                             resumeContentType,
                             resumeData,
-                            resumeNotes);
+                            resumeNotes,
+                            null);
 
                         InsertApplicationDocument(
                             con,
                             transaction,
+                            userId,
                             applicationId,
                             "Cover Letter",
                             coverLetterFileName,
                             coverLetterContentType,
                             coverLetterData,
-                            coverLetterNotes);
+                            coverLetterNotes,
+                            null
+                        );
 
                         transaction.Commit();
 
@@ -764,12 +774,14 @@ namespace JobApplicationTracker
         private void InsertApplicationDocument(
             MySqlConnection con,
             MySqlTransaction transaction,
+            int userId,
             int applicationId,
             string documentType,
             string fileName,
             string contentType,
             byte[] fileData,
-            string notes)
+            string documentNotes,
+            string applicationNotes)
         {
             if (fileData == null)
             {
@@ -777,9 +789,9 @@ namespace JobApplicationTracker
             }
 
             string documentSql = @"
-        INSERT INTO application_documents
+        INSERT INTO documents
         (
-            application_id,
+            user_id,
             document_type,
             file_name,
             content_type,
@@ -789,24 +801,26 @@ namespace JobApplicationTracker
         )
         VALUES
         (
-            @applicationId,
+            @userId,
             @documentType,
             @fileName,
             @contentType,
             @fileSize,
             @fileData,
-            @notes
+            @documentNotes
         );";
 
-            MySqlCommand documentCommand =
-                new MySqlCommand(
-                    documentSql,
-                    con,
-                    transaction);
+        int documentId;
 
+        using (MySqlCommand documentCommand =
+            new MySqlCommand(
+                documentSql,
+                con,
+                transaction))
+        {
             documentCommand.Parameters.AddWithValue(
-                "@applicationId",
-                applicationId);
+                "@userId",
+                userId);
 
             documentCommand.Parameters.AddWithValue(
                 "@documentType",
@@ -831,14 +845,166 @@ namespace JobApplicationTracker
                 fileData);
 
             documentCommand.Parameters.AddWithValue(
-                "@notes",
-                EmptyToNull(notes));
+                "@documentNotes",
+                EmptyToNull(documentNotes));
 
             documentCommand.ExecuteNonQuery();
+
+            documentId =
+                Convert.ToInt32(
+                    documentCommand.LastInsertedId
+                );
         }
 
-		[WebMethod(EnableSession = true)]
-public string AddRecruiter(
+        string linkSql = @"
+        INSERT INTO application_documents
+        (
+            application_id,
+            document_id,
+            application_notes
+        )
+        VALUES
+        (
+            @applicationId,
+            @documentId,
+            @applicationNotes
+        );";
+
+            using (MySqlCommand linkCommand =
+                new MySqlCommand(
+                    linkSql,
+                    con,
+                    transaction))
+            {
+                linkCommand.Parameters.AddWithValue(
+                    "@applicationId",
+                    applicationId);
+
+                linkCommand.Parameters.AddWithValue(
+                    "@documentId",
+                    documentId);
+
+                linkCommand.Parameters.AddWithValue(
+                    "@applicationNotes",
+                    EmptyToNull(applicationNotes));
+
+                linkCommand.ExecuteNonQuery();
+            }
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        /// View Applications Function
+        ////////////////////////////////////////////////////////////////////////
+        
+        [WebMethod(EnableSession = true)]
+        public List<ApplicationSummary> GetApplications()
+        {
+
+            int userId =
+                Convert.ToInt32(
+                    Session["userId"]
+                );
+
+            List<ApplicationSummary> applications =
+                new List<ApplicationSummary>();
+
+            using (
+                MySqlConnection con =
+                    new MySqlConnection(
+                        getConString()
+                    )
+            )
+            {
+                con.Open();
+
+                string query = @"
+            SELECT
+                application_id,
+                company_name,
+                job_title,
+                location,
+                date_applied,
+                application_status,
+                follow_up_date,
+                is_archived,
+                updated_at
+            FROM applications
+            WHERE user_id = @userId
+            ORDER BY date_applied DESC,
+                     application_id DESC;";
+
+                using (
+                    MySqlCommand command =
+                        new MySqlCommand(
+                            query,
+                            con
+                        )
+                )
+                {
+                    command.Parameters.AddWithValue("@userId",userId);
+
+                    using (
+                        MySqlDataReader reader =command.ExecuteReader()
+                    )
+                    {
+                        while (reader.Read())
+                        {
+                            ApplicationSummary application = new ApplicationSummary();
+
+                            application.ApplicationId =Convert.ToInt32(reader["application_id"]);
+
+                            application.CompanyName = Convert.ToString(reader["company_name"]);
+
+                            application.JobTitle = Convert.ToString(reader["job_title"]);
+
+                            application.Location = reader["location"] == DBNull.Value ? "" : Convert.ToString(reader["location"]);
+
+                            application.DateApplied = Convert.ToDateTime(reader["date_applied"]).ToString("yyyy-MM-dd");
+
+                            application.ApplicationStatus =Convert.ToString(reader["application_status"]);
+
+                            application.FollowUpDate = reader["follow_up_date"] == DBNull.Value? "": Convert.ToDateTime(reader["follow_up_date"]).ToString("yyyy-MM-dd");
+
+                            application.IsArchived = Convert.ToBoolean(reader["is_archived"]);
+
+                            application.UpdatedAt = Convert.ToDateTime(reader["updated_at"]).ToString("yyyy-MM-dd HH:mm:ss");
+
+                            applications.Add(application);
+                        }
+                    }
+                }
+            }
+
+            return applications;
+        }
+
+        public class ApplicationSummary
+        {
+            public int ApplicationId
+            {get; set;}
+            public string CompanyName
+            { get; set; }
+            public string JobTitle
+            { get; set; }
+            public string Location
+            { get; set; }
+            public string DateApplied
+            { get; set; }
+            public string ApplicationStatus
+            { get; set; }
+            public string FollowUpDate
+            { get; set; }
+            public bool IsArchived { get; set; }
+            public string UpdatedAt { get; set; }
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        /// Add Recruiter Function
+        ////////////////////////////////////////////////////////////////////////
+        [WebMethod(EnableSession = true)]
+
+        
+        public string AddRecruiter(
     int applicationId,
     string firstName,
     string lastName,

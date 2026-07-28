@@ -12,6 +12,468 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css">
 
+    <script>
+        var allApplications = [];
+        var filteredApplications = [];
+
+        $(document).ready(function () {
+            LoadAccountInformation();
+            LoadApplications();
+
+            $("#applicationSearch").on(
+                "input",
+                FilterApplications
+            );
+
+            $("#applicationSort").on(
+                "change",
+                FilterApplications
+            );
+
+            $("#statusFilter").on(
+                "change",
+                FilterApplications
+            );
+        });
+
+
+        function LoadApplications() {
+
+            ClearPageMessage();
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplications",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    allApplications = msg.d || [];
+
+                    UpdateSummaryCards();
+                    FilterApplications();
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr.responseText);
+
+                    ShowPageMessage(
+                        "Unable to load your applications.", "error");
+                }
+            });
+        }
+
+
+        function FilterApplications() {
+
+            var searchText =
+                $("#applicationSearch").val().trim().toLowerCase();
+
+            var selectedStatus =
+                $("#statusFilter").val();
+
+            filteredApplications =
+                allApplications.filter(function (application) {
+
+                    var isArchived =
+                        application.IsArchived == true;
+
+                    var matchesStatus =
+                        DoesApplicationMatchStatus(
+                            application,
+                            selectedStatus,
+                            isArchived
+                        );
+
+                    var searchableText =
+                        (
+                            application.CompanyName + " " +
+                            application.JobTitle + " " +
+                            application.Location
+                        ).toLowerCase();
+
+                    var matchesSearch =
+                        searchableText.includes(searchText);
+
+                    return matchesStatus && matchesSearch;
+                });
+
+            SortApplications();
+            DisplayApplications();
+        }
+
+        function DoesApplicationMatchStatus(
+            application,
+            selectedStatus,
+            isArchived) {
+
+            if (selectedStatus == "All") {
+                return true;
+            }
+
+            if (selectedStatus == "Archived") {
+                return isArchived;
+            }
+
+            if (isArchived) {
+                return false;
+            }
+
+            return (
+                application.ApplicationStatus ==
+                selectedStatus
+            );
+        }
+
+        function SortApplications() {
+
+            var selectedSort =
+                $("#applicationSort").val();
+
+            filteredApplications.sort(
+                function (firstApplication, secondApplication) {
+
+                    if (selectedSort == "dateNewest") {
+
+                        return(
+                            GetDateValue(
+                                secondApplication.DateApplied
+                            ) -
+                            GetDateValue(
+                                firstApplication.DateApplied
+                            )
+                        );
+                    }
+
+                    if (selectedSort == "dateOldest") {
+
+                        return (
+                            GetDateValue(
+                                firstApplication.DateApplied
+                            ) -
+                            GetDateValue(
+                                secondApplication.DateApplied
+                            )
+                        );
+                    }
+
+                    var firstCompany =
+                        firstApplication.CompanyName || "";
+
+                    var secondCompany =
+                        secondApplication.CompanyName || "";
+
+                    if (selectedSort ==
+                        "companyAscending") {
+
+                        return firstCompany.localeCompare(secondCompany);
+                    }
+
+                    return secondCompany.localeCompare(
+                        firstCompany
+                    );
+                }
+            );
+        }
+
+        function GetDateValue(value) {
+
+            if (!value) {
+                return 0;
+            }
+
+            var date =
+                new Date(value);
+
+            if (isNaN(date.getTime())) {
+                return 0;
+            }
+
+            return date.getTime();
+        }
+
+        function DisplayApplications() {
+
+            var tableBody =
+                $("#applicationsTableBody");
+
+            tableBody.empty();
+
+            if (filteredApplications.length == 0) {
+
+                tableBody.append(
+                    "<tr>" +
+                        "<td colspan='8'>" +
+                            "class='emptyTableMessage'>" +
+                            "No applications were found." +
+                        "</td>" +
+                    "</tr>"
+                );
+
+                $("#applicationCountMessage")
+                    .text("Showing 0 applications.");
+
+                return;
+            }
+
+            filteredApplications.forEach(
+                function (application) {
+
+                    var statusText =
+                        GetStatusText(application);
+
+                    var statusClass =
+                        GetStatusClass(application);
+
+                    var row =
+                        "<tr>" +
+                            "<td class='companyName'>" +
+                                EscapeHtml(application.CompanyName) +
+                            "</td>" +
+
+                            "<td>" +
+                                EscapeHtml(application.JobTitle) +
+                            "</td>" +
+
+                            "<td>" +
+                                EscapeHtml(application.Location || "") +
+                            "</td>" +
+
+                            "<td>" +
+                                FormatDate(application.DateApplied) +
+                            "</td>" +
+
+                            "<td>" +
+                            "<span class='statusBadge " + statusClass + "'>" +
+                                EscapeHtml(application.ApplicationStatus) +
+                            "</span>" +
+                            "</td>" +
+
+                            "<td>" +
+                                FormatDate(application.FollowUpDate) +
+                            "</td>" +
+
+                            "<td>" +
+                                FormatDate(application.UpdatedAt) +
+                            "</td>" +
+
+                            "<td>" +
+                                BuildApplicationActions(application.ApplicationId) +
+                            "</td>" +
+
+                        "</tr>";
+
+                    tableBody.append(row);
+                }
+            );
+
+            $("#applicationCountMessage").text(
+                "Showing " +
+                filteredApplications.length +
+                " application."
+
+                (
+                    filteredApplications.length == 1
+                        ? "."
+                        : "s."
+                )
+            );
+        }
+
+        function GetStatusText(application) {
+
+            if (application.IsArchived == true) {
+                return "Archived";
+            }
+
+            return (
+                application.ApplicationStatus ||
+                "Applied"
+            );
+        }
+
+        function GetStatusClass(application) {
+
+            if (application.IsArchived == true) {
+                return "statusArchived";
+            }
+
+            if (
+                application.ApplicationStatus ==
+                "Interview"
+            ) {
+                return "statusInterview";
+            }
+
+            if (
+                application.ApplicationStatus ==
+                "Offer"
+            ) {
+                return "statusOffer";
+            }
+
+            if (
+                application.ApplicationStatus ==
+                "Rejected"
+            ) {
+                return "statusRejected";
+        }
+
+        function BuildApplicationActions(application) {
+            var applicationId =
+                application.ApplicationId;
+
+            var archiveText =
+                application.IsArchived == true
+                    ? "Unarchive"
+                    : "Archive";
+
+            return (
+                "<div class='actionArea'>" +
+
+                    "<a class='actionLink' href='application-details.html?applicationId=" + applicationId + "'>" +
+                        "Details" +
+                    "</a>" +
+
+                    "<a class='actionLink' href='application-documents.html?applicationId=" + applicationId + "'>" +
+                        "Documents" +
+                    "</a>" +
+
+                    "<a class='actionLink' href='application-recruiters.html?applicationId=" + applicationId + "'>" +
+                        "Recruiter" +
+                    "</a>" +
+
+                    "<a class='actionLink' href='edit-application.html?applicationId=" + applicationId + "'>" +
+                        "Edit" +
+                    "</a>" +
+
+                    "<div class='moreMenuWrapper'>" +
+
+                        "<button type='button' class='moreButton' aria-label='More application actions' onclick='ToggleMoreMenu(" + applicationId + ");'>" +
+                            "&hellip;" +
+                        "</button>" +
+
+                        "<div class='moreMenu' id='moreMenu" + applicationId + "'>" +
+
+                            "<button type='button' onclick='ToggleArchiveApplication(" + applicationId + ");'>" +
+                                archiveText +
+                            "</button>" +
+
+                            "<button type='button' class='deleteAction' onclick='ToggleArchiveApplication(" + applicationId + ");'>" +
+                                "Delete" +
+                            "</button>" +
+
+                        "</div>" +
+
+                    "</div>" +
+
+                "</div>"
+            );
+        }
+
+
+        function ToggleMoreMenu(applicationId) {
+
+            var selectedMenu = "#moreMenu" + applicationId;
+
+            $(".moreMenu").not(selectedMenu).hide();
+
+            $(selectedMenu).toggle();
+        }
+
+
+        function UpdateSummaryCards() {
+
+            var activeCount = 0;
+            var interviewCount = 0;
+            var offerCount = 0;
+            var rejectedCount = 0;
+            var archivedCount = 0;
+
+            allApplications.forEach(
+                function (application) {
+
+                    if (application.IsArchived == true) {
+                        archivedCount++;
+                        return;
+                    }
+
+                    if (application.ApplicationStatus =="Rejected") {
+                        rejectedCount++;
+                        return;
+                    }
+
+                    activeCount++;
+
+                    if (application.ApplicationStatus == "Interview") {
+                        interviewCount++;
+                    }
+                    else if (application.ApplicationStatus == "Offer") {
+                        offerCount++;
+                    }
+                }
+            );
+
+            $("#activeApplicationCount")
+                .text(activeCount);
+
+            $("#interviewCount")
+                .text(interviewCount);
+
+            $("#offerCount")
+                .text(offerCount);
+
+            $("#rejectedCount")
+                .text(rejectedCount);
+
+            $("#archivedCount")
+                .text(archivedCount);
+        }
+
+        function ToggleArchiveApplication(
+        applicationId) {
+
+        $(".moreMenu").hide();
+
+        alert(
+            "Archive and unarchive will be " +
+            "connected when we add the " +
+            "ProjectServices methods. " +
+            "Application ID: " +
+            applicationId
+        );
+    }
+
+        function DeleteApplication(applicationId) {
+            $(".moreMenu").hide();
+
+            alert(
+                "Delete will be connected when " +
+                "we add the ProjectServices method. " +
+                "Application ID: " +
+                applicationId
+            );
+        }
+
+        $(document).click(
+            function (event) {
+
+                if (
+                    !$(event.target).closest(
+                        ".moreMenuWrapper"
+                    ).length
+                ) {
+
+                    $(".moreMenu").hide();
+                }
+            }
+        );
+    </script>
+
+
     <style>
         .pageHeadingRow {
             display: flex;
@@ -33,7 +495,11 @@
             font-size: 17px;
         }
 
+
+        /* Add Application button */
+
         .addApplicationButton {
+            flex-shrink: 0;
             padding: 13px 23px;
             border: 1px solid #1556d8;
             border-radius: 6px;
@@ -48,24 +514,27 @@
                 background-color: #1045b1;
             }
 
+
+        /* Summary cards */
+
         .summaryGrid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 22px;
+            gap: 18px;
             margin-bottom: 24px;
         }
 
         .summaryCard {
-            padding: 24px;
+            padding: 22px;
             border: 1px solid;
             border-radius: 8px;
-            text-align: center;
             background-color: white;
+            text-align: center;
         }
 
             .summaryCard h3 {
                 margin: 0 0 12px;
-                font-size: 17px;
+                font-size: 16px;
             }
 
             .summaryCard p {
@@ -104,12 +573,18 @@
             color: #7c3aed;
         }
 
+
+        /* Applications table card */
+
         .applicationsCard {
             padding: 22px;
             border-radius: 9px;
             background-color: white;
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
         }
+
+
+        /* Search, sort, and filter controls */
 
         .tableControls {
             display: flex;
@@ -120,40 +595,55 @@
 
             .tableControls input,
             .tableControls select {
-                min-width: 250px;
+                min-width: 240px;
                 padding: 11px 13px;
                 border: 1px solid #cbd5e1;
                 border-radius: 5px;
                 background-color: white;
                 color: #334155;
+                font-family: inherit;
                 font-size: 15px;
             }
+
+                .tableControls input:focus,
+                .tableControls select:focus {
+                    border-color: #2563eb;
+                    outline: 2px solid rgba(37, 99, 235, 0.15);
+                }
+
+
+        /* Table */
 
         .tableWrapper {
             overflow-x: auto;
         }
 
-        table {
+        .applicationsCard table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        th,
-        td {
+        .applicationsCard th,
+        .applicationsCard td {
             padding: 14px 12px;
             border-bottom: 1px solid #e2e8f0;
             text-align: left;
             white-space: nowrap;
         }
 
-        th {
+        .applicationsCard th {
+            background-color: #f8fafc;
             color: #475569;
             font-size: 13px;
         }
 
-        td {
+        .applicationsCard td {
             color: #334155;
             font-size: 14px;
+        }
+
+        .applicationsCard tbody tr:hover {
+            background-color: #f8fafc;
         }
 
         .companyName {
@@ -161,9 +651,18 @@
             font-weight: bold;
         }
 
+        .emptyTableMessage {
+            padding: 32px;
+            color: #64748b;
+            text-align: center;
+        }
+
+
+        /* Status badges */
+
         .statusBadge {
             display: inline-block;
-            min-width: 76px;
+            min-width: 82px;
             padding: 6px 10px;
             border-radius: 6px;
             text-align: center;
@@ -196,10 +695,13 @@
             color: #7c3aed;
         }
 
+
+        /* Row actions */
+
         .actionArea {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 14px;
         }
 
         .actionLink {
@@ -214,6 +716,9 @@
             .actionLink:hover {
                 text-decoration: underline;
             }
+
+
+        /* Three-dot menu */
 
         .moreMenuWrapper {
             position: relative;
@@ -268,6 +773,9 @@
                 color: #dc2626;
             }
 
+
+        /* Table footer */
+
         .tableFooter {
             display: flex;
             align-items: center;
@@ -276,76 +784,6 @@
             padding-top: 20px;
             color: #64748b;
             font-size: 14px;
-        }
-
-        .pagination {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .pageButton {
-            min-width: 38px;
-            padding: 9px 11px;
-            border: 1px solid #cbd5e1;
-            border-radius: 5px;
-            background-color: white;
-            color: #334155;
-            cursor: pointer;
-        }
-
-            .pageButton:hover {
-                background-color: #f1f5f9;
-            }
-
-        .currentPage {
-            border-color: #1556d8;
-            background-color: #1556d8;
-            color: white;
-        }
-
-        @media screen and (max-width: 1100px) {
-            .summaryGrid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .pageHeadingRow {
-                flex-direction: column;
-            }
-        }
-
-        @media screen and (max-width: 700px) {
-            header {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 15px;
-                padding: 22px;
-            }
-
-            .accountArea {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .pageWrapper {
-                padding: 18px 15px 35px;
-            }
-
-            .summaryGrid {
-                grid-template-columns: 1fr;
-            }
-
-            .tableControls input,
-            .tableControls select {
-                width: 100%;
-                min-width: 0;
-            }
-
-            .tableFooter {
-                align-items: flex-start;
-                flex-direction: column;
-            }
         }
     </style>
 </head>
@@ -442,11 +880,9 @@
 
                 <input type="search"
                        id="applicationSearch"
-                       placeholder="Search applications..."
-                       oninput="FilterApplications();" />
+                       placeholder="Search applications..."/>
 
-                <select id="applicationSort"
-                        onchange="FilterApplications();">
+                <select id="applicationSort">
 
                     <option value="dateNewest">
                         Sort by: Date Applied (Newest)
@@ -466,8 +902,7 @@
 
                 </select>
 
-                <select id="statusFilter"
-                        onchange="FilterApplications();">
+                <select id="statusFilter">
 
                     <option value="All">
                         Filter: All Statuses
