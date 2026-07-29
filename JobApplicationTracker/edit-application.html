@@ -1,0 +1,334 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Edit an existing job application." />
+    <title>Edit Application - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js?v=2"></script>
+    <link rel="stylesheet" href="site.css?v=2" />
+
+    <script type="text/javascript">
+        var applicationId = 0;
+
+        $(document).ready(function () {
+            LoadAccountInformation();
+
+            var urlParameters = new URLSearchParams(window.location.search);
+            applicationId = parseInt(urlParameters.get("applicationId"));
+
+            if (!applicationId || applicationId <= 0) {
+                ShowPageMessage("A valid application was not selected.", "error");
+                $("#saveApplicationButton").prop("disabled", true);
+                return;
+            }
+
+            $("#applicationForm").submit(function (event) {
+                event.preventDefault();
+                UpdateApplication();
+            });
+
+            LoadApplication();
+        });
+
+        function LoadApplication() {
+            ClearPageMessage();
+            $("#saveApplicationButton").prop("disabled", true);
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplicationById",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    var application = msg.d;
+
+                    if (application == null) {
+                        ShowPageMessage(
+                            "The application could not be found or does not belong to your account.",
+                            "error"
+                        );
+                        return;
+                    }
+
+                    $("#companyName").val(application.CompanyName);
+                    $("#jobTitle").val(application.JobTitle);
+                    $("#location").val(application.Location);
+                    $("#dateApplied").val(application.DateApplied);
+                    $("#applicationStatus").val(application.ApplicationStatus);
+                    $("#jobPostingUrl").val(application.JobPostingUrl);
+                    $("#followUpDate").val(application.FollowUpDate);
+                    $("#applicationNotes").val(application.ApplicationNotes);
+
+                    $("#saveApplicationButton").prop("disabled", false);
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage(
+                        "Unable to load the application. Check the browser console.",
+                        "error"
+                    );
+                }
+            });
+        }
+
+        function UpdateApplication() {
+            var form = document.getElementById("applicationForm");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            ClearPageMessage();
+            $("#saveApplicationButton").prop("disabled", true);
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId,
+                companyName: $("#companyName").val().trim(),
+                jobTitle: $("#jobTitle").val().trim(),
+                location: $("#location").val().trim(),
+                dateApplied: $("#dateApplied").val(),
+                applicationStatus: $("#applicationStatus").val(),
+                jobPostingUrl: $("#jobPostingUrl").val().trim(),
+                followUpDate: $("#followUpDate").val(),
+                applicationNotes: $("#applicationNotes").val().trim()
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/UpdateApplication",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application updated successfully.", "success");
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+
+                    $("#saveApplicationButton").prop("disabled", false);
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage(
+                        "Unable to update the application. Check the browser console.",
+                        "error"
+                    );
+                    $("#saveApplicationButton").prop("disabled", false);
+                }
+            });
+        }
+
+        function CancelApplication() {
+            window.location.href = "view-applications.html";
+        }
+    </script>
+
+    <style>
+        .formCard {
+            padding: 32px 38px 24px;
+            background-color: white;
+            border-radius: 9px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.13);
+        }
+
+        .formHeading {
+            margin-bottom: 26px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #d8dee8;
+        }
+
+        .formHeading h2 {
+            margin: 0 0 8px 0;
+            color: #0f172a;
+            font-size: 36px;
+        }
+
+        .formHeading p {
+            margin: 0;
+            color: #64748b;
+        }
+
+        .formSection {
+            margin-top: 28px;
+        }
+
+        .formSection:first-of-type {
+            margin-top: 0;
+        }
+
+        .sectionHeading {
+            margin: 0 0 18px 0;
+            padding-bottom: 9px;
+            border-bottom: 1px solid #d8dee8;
+            color: #1f3c88;
+            font-size: 21px;
+        }
+
+        .formGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 22px;
+        }
+
+        .formField {
+            min-width: 0;
+        }
+
+        .fullWidth {
+            grid-column: 1 / -1;
+        }
+
+        .formActions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 14px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #d8dee8;
+        }
+
+        .formActions .primaryButton,
+        .formActions .secondaryButton {
+            min-width: 145px;
+        }
+
+        @media (max-width: 700px) {
+            .formGrid {
+                grid-template-columns: 1fr;
+            }
+
+            .fullWidth {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div>
+            <h1>In Formation Jobs</h1>
+            <p>Keep your job search organized and moving forward.</p>
+        </div>
+
+        <div class="accountArea">
+            <p id="welcomeMessage">Loading account...</p>
+
+            <div id="signedInArea">
+                <a class="accountLink" href="#" onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="pageWrapper">
+        <nav class="pageNav">
+            <a href="home-page.html">Home</a>
+            <span>&gt;</span>
+            <a href="view-applications.html">View Applications</a>
+            <span>&gt;</span>
+            <span>Edit Application</span>
+        </nav>
+
+        <main class="formCard">
+            <div class="formHeading">
+                <h2>Edit Application</h2>
+                <p>Update the saved information for this job application.</p>
+            </div>
+
+            <form id="applicationForm">
+                <section class="formSection">
+                    <h3 class="sectionHeading">Application Information</h3>
+
+                    <div class="formGrid">
+                        <div class="formField">
+                            <label for="companyName">
+                                Company Name <span class="requiredMark">*</span>
+                            </label>
+                            <input type="text" id="companyName" maxlength="100"
+                                   placeholder="Enter company name" required />
+                        </div>
+
+                        <div class="formField">
+                            <label for="jobTitle">
+                                Job Title <span class="requiredMark">*</span>
+                            </label>
+                            <input type="text" id="jobTitle" maxlength="100"
+                                   placeholder="Enter job title" required />
+                        </div>
+
+                        <div class="formField">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" maxlength="100"
+                                   placeholder="City, State or Remote" />
+                        </div>
+
+                        <div class="formField">
+                            <label for="dateApplied">
+                                Date Applied <span class="requiredMark">*</span>
+                            </label>
+                            <input type="date" id="dateApplied" required />
+                        </div>
+
+                        <div class="formField">
+                            <label for="applicationStatus">
+                                Application Status <span class="requiredMark">*</span>
+                            </label>
+                            <select id="applicationStatus" required>
+                                <option value="Applied">Applied</option>
+                                <option value="Interview">Interview</option>
+                                <option value="Offer">Offer</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                        </div>
+
+                        <div class="formField">
+                            <label for="jobPostingUrl">Job Posting URL</label>
+                            <input type="url" id="jobPostingUrl" maxlength="500"
+                                   placeholder="https://" />
+                        </div>
+
+                        <div class="formField">
+                            <label for="followUpDate">Application Follow-Up Date</label>
+                            <input type="date" id="followUpDate" />
+                        </div>
+
+                        <div class="formField fullWidth">
+                            <label for="applicationNotes">Application / Interview Notes</label>
+                            <textarea id="applicationNotes"
+                                      placeholder="Update application notes, interview feedback, contact history, and next steps."></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <p id="pageMessage"></p>
+
+                <div class="formActions">
+                    <button type="submit" id="saveApplicationButton" class="primaryButton">
+                        Save Changes
+                    </button>
+
+                    <button type="button" class="secondaryButton" onclick="CancelApplication();">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>
