@@ -190,29 +190,103 @@ namespace JobApplicationTracker
         /// Request Management
         ////////////////////////////////////////////////////////////////////////
 
-        [WebMethod(EnableSession = true)]
-        public DataTable GetPendingAccountRequests()
+    [WebMethod(EnableSession = true)]
+    public List<AccountRequestSummary> GetPendingAccountRequests()
+    {
+    List<AccountRequestSummary> requests =
+        new List<AccountRequestSummary>();
+
+    if (Session["userId"] == null ||
+        Session["role"] == null ||
+        Session["role"].ToString().ToLower() != "admin")
+    {
+        return requests;
+    }
+
+    using (MySqlConnection con =
+        new MySqlConnection(getConString()))
+    {
+        con.Open();
+
+        string query = @"
+            SELECT
+                request_id,
+                first_name,
+                last_name,
+                email,
+                username,
+                status,
+                requested_at
+            FROM account_requests
+            WHERE status = 'pending'
+            ORDER BY requested_at ASC;";
+
+        using (MySqlCommand command =
+            new MySqlCommand(query, con))
         {
-            DataTable requests = new DataTable("AccountRequests");
-
-            using (MySqlConnection con = new MySqlConnection(getConString()))
+            using (MySqlDataReader reader =
+                command.ExecuteReader())
             {
-                string query = @"
-					SELECT request_id, first_name, last_name, email, username, status, requested_at
-					FROM account_requests
-					WHERE status = 'pending'
-					ORDER BY requested_at ASC;";
-
-                using (MySqlCommand cmd = new MySqlCommand(query, con))
-                using (MySqlDataAdapter adapter = new MySqlDataAdapter(cmd))
+                while (reader.Read())
                 {
-                    adapter.Fill(requests);
+                    AccountRequestSummary request =
+                        new AccountRequestSummary();
+
+                    request.RequestId =
+                        Convert.ToInt32(reader["request_id"]);
+
+                    request.FirstName =
+                        Convert.ToString(reader["first_name"]);
+
+                    request.LastName =
+                        Convert.ToString(reader["last_name"]);
+
+                    request.Email =
+                        Convert.ToString(reader["email"]);
+
+                    request.Username =
+                        Convert.ToString(reader["username"]);
+
+                    request.Status =
+                        Convert.ToString(reader["status"]);
+
+                    request.RequestedAt =
+                        Convert.ToDateTime(
+                            reader["requested_at"]
+                        ).ToString("yyyy-MM-dd HH:mm:ss");
+
+                    requests.Add(request);
                 }
             }
-
-            return requests;
         }
+    }
 
+    return requests;
+}
+
+public class AccountRequestSummary
+{
+    public int RequestId
+    { get; set; }
+
+    public string FirstName
+    { get; set; }
+
+    public string LastName
+    { get; set; }
+
+    public string Email
+    { get; set; }
+
+    public string Username
+    { get; set; }
+
+    public string Status
+    { get; set; }
+
+    public string RequestedAt
+    { get; set; }
+}
 
         [WebMethod(EnableSession = true)]
         public string ApproveAccountRequest(int requestId)
