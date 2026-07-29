@@ -10,29 +10,22 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js?v=2"></script>
+    <link rel="stylesheet" href="site.css?v=2">
 
     <script type="text/javascript">
 
         $(document).ready(function () {
+
             LoadAccountInformation();
+
+            $("#applicationForm").submit(
+                function (event) {
+
+                    event.preventDefault();
+                    SaveApplication();
+                }
+            );
         });
-
-
-        function ShowError(message) {
-
-            $("#formMessage")
-                .removeClass("successMessage")
-                .addClass("errorMessage")
-                .text(message);
-        }
-
-        function ShowSuccess(message) {
-
-            $("#formMessage")
-                .removeClass("errorMessage")
-                .addClass("successMessage")
-                .text(message);
-        }
 
         function ReadFile(file) {
 
@@ -97,9 +90,7 @@
                 return;
             }
 
-            $("#formMessage")
-                .removeClass("errorMessage successMessage")
-                .text("");
+            ClearPageMessage();
 
             var recruiterFirstName =
                 $("#recruiterFirstName").val().trim();
@@ -142,10 +133,10 @@
                     recruiterLastName == "" ||
                     recruiterEmail == "")) {
 
-                ShowError(
+                ShowPageMessage(
                     "Complete the recruiter's first name, " +
                     "last name, and email, or leave the " +
-                    "recruiter section blank."
+                    "recruiter section blank.", "error"
                 );
 
                 return;
@@ -156,10 +147,6 @@
 
             var coverLetterFile =
                 $("#coverLetterFile")[0].files[0];
-
-            $("#saveApplicationButton")
-                .prop("disabled", true)
-                .text("Saving...");
 
             try {
 
@@ -255,44 +242,32 @@
 
                         if (msg.d == "Success") {
 
-                            ShowSuccess(
-                                "Application saved successfully."
+                            ShowPageMessage(
+                                "Application saved successfully.", "success"
                             );
 
-                            $("#applicationForm")[0].reset();
+                            form.reset();
                         }
                         else {
-                            ShowError(msg.d);
+                            ShowPageMessage(msg.d, "error");
                         }
-
-                        ResetSaveButton();
                     },
 
                     error: function (xhr) {
 
                         console.log(xhr.responseText);
 
-                        ShowError(
+                        ShowPageMessage(
                             "Unable to save the application. " +
-                            "Check the browser console."
+                            "Check the browser console.", "error"
                         );
-
-                        ResetSaveButton();
                     }
                 });
             }
             catch (error) {
 
-                ShowError(error.message);
-                ResetSaveButton();
+                ShowPageMessage(error.message, "error");
             }
-        }
-
-        function ResetSaveButton() {
-
-            $("#saveApplicationButton")
-                .prop("disabled", false)
-                .text("Save Application");
         }
 
         function CancelApplication() {
@@ -302,83 +277,6 @@
     </script>
 
     <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #eef2f7;
-            margin: 0;
-            color: #1f2937;
-        }
-
-        /* Same header structure and colors as the homepage. */
-        header {
-            background-color: #1f3c88;
-            color: white;
-            padding: 24px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-            header h1 {
-                margin: 0 0 6px 0;
-            }
-
-            header p {
-                margin: 0;
-            }
-
-        .accountArea {
-            text-align: right;
-        }
-
-        #welcomeMessage {
-            display: block;
-            margin-bottom: 8px;
-            text-transform: capitalize;
-            font-weight: bold;
-        }
-
-        #signedInArea {
-            display: none;
-        }
-
-        .accountLink {
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-            .accountLink:hover {
-                text-decoration: underline;
-            }
-
-        .pageWrapper {
-            max-width: 1220px;
-            margin: 0 auto;
-            padding: 22px 30px 45px;
-        }
-
-        .pageNav {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            font-size: 15px;
-        }
-
-            .pageNav a {
-                color: #2563eb;
-                text-decoration: none;
-            }
-
-                .pageNav a:hover {
-                    text-decoration: underline;
-                }
-
         .formCard {
             padding: 32px 38px 24px;
             background-color: white;
@@ -439,49 +337,6 @@
             grid-column: 1 / -1;
         }
 
-        label {
-            display: block;
-            margin-bottom: 7px;
-            color: #1e293b;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 12px 13px;
-            border: 1px solid #cbd5e1;
-            border-radius: 5px;
-            background-color: white;
-            color: #1f2937;
-            font-family: inherit;
-            font-size: 15px;
-        }
-
-            input:focus,
-            select:focus,
-            textarea:focus {
-                border-color: #2563eb;
-                outline: 2px solid rgba(37, 99, 235, 0.15);
-            }
-
-            input::placeholder,
-            textarea::placeholder {
-                color: #94a3b8;
-            }
-
-            input[type="file"] {
-                padding: 8px;
-                background-color: #f8fafc;
-            }
-
-        textarea {
-            min-height: 95px;
-            resize: vertical;
-        }
-
         .formActions {
             display: flex;
             justify-content: flex-end;
@@ -491,94 +346,10 @@
             border-top: 1px solid #d8dee8;
         }
 
-        .primaryButton,
-        .secondaryButton {
-            min-width: 145px;
-            padding: 12px 20px;
-            border-radius: 5px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .primaryButton {
-            border: 1px solid #1556d8;
-            background-color: #1556d8;
-            color: white;
-        }
-
-            .primaryButton:hover {
-                background-color: #1045b1;
+            .formActions .primaryButton,
+            .formActions .secondaryButton {
+                min-width: 145px;
             }
-
-            .primaryButton:disabled {
-                background-color: #94a3b8;
-                border-color: #94a3b8;
-                cursor: not-allowed;
-            }
-
-        .secondaryButton {
-            border: 1px solid #cbd5e1;
-            background-color: white;
-            color: #475569;
-        }
-
-            .secondaryButton:hover {
-                background-color: #f1f5f9;
-            }
-
-        #formMessage {
-            min-height: 22px;
-            margin: 20px 0 0;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .errorMessage {
-            color: #ef4444;
-        }
-
-        .successMessage {
-            color: #1f3c88;
-        }
-
-        @media screen and (max-width: 750px) {
-
-            header {
-                align-items: flex-start;
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            .accountArea {
-                text-align: left;
-            }
-
-            .pageWrapper {
-                padding: 18px 15px 35px;
-            }
-
-            .formCard {
-                padding: 24px 20px;
-            }
-
-            .formGrid {
-                grid-template-columns: 1fr;
-            }
-
-            .fullWidth {
-                grid-column: auto;
-            }
-
-            .formActions {
-                flex-direction: column;
-            }
-
-            .primaryButton,
-            .secondaryButton {
-                width: 100%;
-            }
-        }
     </style>
 </head>
 
@@ -655,7 +426,7 @@
                         <div class="formField">
 
                             <label for="companyName">
-                                Company Name *
+                                Company Name <span class="requiredMark">*</span>
                             </label>
 
                             <input type="text"
@@ -669,7 +440,7 @@
                         <div class="formField">
 
                             <label for="jobTitle">
-                                Job Title *
+                                Job Title <span class="requiredMark">*</span>
                             </label>
 
                             <input type="text"
@@ -696,7 +467,7 @@
                         <div class="formField">
 
                             <label for="dateApplied">
-                                Date Applied *
+                                Date Applied <span class="requiredMark">*</span>
                             </label>
 
                             <input type="date"
@@ -708,7 +479,7 @@
                         <div class="formField">
 
                             <label for="applicationStatus">
-                                Application Status *
+                                Application Status <span class="requiredMark">*</span>
                             </label>
 
                             <select id="applicationStatus"
@@ -942,14 +713,13 @@
 
                 </section>
 
-                <p id="formMessage"></p>
+                <p id="pageMessage"></p>
 
                 <div class="formActions">
 
-                    <button type="button"
+                    <button type="submit"
                             id="saveApplicationButton"
-                            class="primaryButton"
-                            onclick="SaveApplication();">
+                            class="primaryButton">
                         Save Application
                     </button>
 

@@ -28,9 +28,9 @@ CREATE TABLE applications (
         ON DELETE CASCADE
 );
 
-CREATE TABLE application_documents (
+CREATE TABLE documents (
     document_id INT AUTO_INCREMENT PRIMARY KEY,
-    application_id INT NOT NULL,
+    user_id INT NOT NULL,
     document_type VARCHAR(20) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     content_type VARCHAR(100) NOT NULL,
@@ -41,9 +41,9 @@ CREATE TABLE application_documents (
         NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_documents_application
-        FOREIGN KEY (application_id)
-        REFERENCES applications(application_id)
+    CONSTRAINT fk_documents_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
         ON DELETE CASCADE
 );
 
@@ -66,9 +66,32 @@ CREATE TABLE recruiters (
         DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_recruiters_user
+    CONSTRAINT fk_recruiters_application
         FOREIGN KEY (application_id)
         REFERENCES applications(application_id)
         ON DELETE CASCADE
 );
 
+CREATE TABLE application_documents (
+    application_id INT NOT NULL,
+    document_id INT NOT NULL,
+    application_notes TEXT,
+    linked_at TIMESTAMP
+        NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (
+        application_id,
+        document_id
+    ),
+
+    CONSTRAINT fk_application_documents_application
+        FOREIGN KEY (application_id)
+        REFERENCES applications(application_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_application_documents_document
+        FOREIGN KEY (document_id)
+        REFERENCES documents(document_id)
+        ON DELETE CASCADE
+);
