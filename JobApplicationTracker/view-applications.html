@@ -206,8 +206,7 @@
 
                 tableBody.append(
                     "<tr>" +
-                        "<td colspan='8'>" +
-                            "class='emptyTableMessage'>" +
+                        "<td colspan='8' class='emptyTableMessage'>" +
                             "No applications were found." +
                         "</td>" +
                     "</tr>"
@@ -222,11 +221,9 @@
             filteredApplications.forEach(
                 function (application) {
 
-                    var statusText =
-                        GetStatusText(application);
+                    var statusText = GetStatusText(application);
 
-                    var statusClass =
-                        GetStatusClass(application);
+                    var statusClass = GetStatusClass(application);
 
                     var row =
                         "<tr>" +
@@ -248,7 +245,7 @@
 
                             "<td>" +
                             "<span class='statusBadge " + statusClass + "'>" +
-                                EscapeHtml(application.ApplicationStatus) +
+                                EscapeHtml(statusText) +
                             "</span>" +
                             "</td>" +
 
@@ -261,7 +258,7 @@
                             "</td>" +
 
                             "<td>" +
-                                BuildApplicationActions(application.ApplicationId) +
+                                BuildApplicationActions(application.ApplicationId,application.IsArchived) +
                             "</td>" +
 
                         "</tr>";
@@ -273,11 +270,11 @@
             $("#applicationCountMessage").text(
                 "Showing " +
                 filteredApplications.length +
-                " application."
+                " application." +
 
                 (
                     filteredApplications.length == 1
-                        ? "."
+                        ? "." 
                         : "s."
                 )
             );
@@ -320,14 +317,14 @@
                 "Rejected"
             ) {
                 return "statusRejected";
+            }
+            return "statusApplied"
         }
 
-        function BuildApplicationActions(application) {
-            var applicationId =
-                application.ApplicationId;
+            function BuildApplicationActions(applicationId, isArchived) {
 
             var archiveText =
-                application.IsArchived == true
+                isArchived == true
                     ? "Unarchive"
                     : "Archive";
 
@@ -338,7 +335,7 @@
                         "Details" +
                     "</a>" +
 
-                    "<a class='actionLink' href='application-documents.html?applicationId=" + applicationId + "'>" +
+                    "<a class='actionLink' href='documents.html?applicationId=" + applicationId + "'>" +
                         "Documents" +
                     "</a>" +
 
@@ -362,7 +359,7 @@
                                 archiveText +
                             "</button>" +
 
-                            "<button type='button' class='deleteAction' onclick='ToggleArchiveApplication(" + applicationId + ");'>" +
+                            "<button type='button' class='deleteAction' onclick='DeleteApplication(" + applicationId + ");'>" +
                                 "Delete" +
                             "</button>" +
 
@@ -951,455 +948,6 @@
         </main>
 
     </div>
-
-    <script>
-        var allApplications = [];
-        var filteredApplications = [];
-
-        $(document).ready(function () {
-            LoadAccountInformation();
-            LoadApplications();
-        });
-
-
-        function LoadApplications() {
-
-            $.ajax({
-                type: "POST",
-                url: "ProjectServices.asmx/GetApplications",
-                data: "{}",
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-
-                success: function (msg) {
-
-                    allApplications = msg.d || [];
-
-                    UpdateSummaryCards();
-                    FilterApplications();
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr.responseText);
-
-                    ShowPageError(
-                        "Unable to load your applications."
-                    );
-                }
-            });
-        }
-
-
-        function FilterApplications() {
-
-            var searchText =
-                $("#applicationSearch").val().trim().toLowerCase();
-
-            var selectedStatus =
-                $("#statusFilter").val();
-
-            filteredApplications =
-                allApplications.filter(function (application) {
-
-                    var matchesStatus =
-                        selectedStatus == "All" ||
-                        application.ApplicationStatus ==
-                        selectedStatus;
-
-                    var searchableText =
-                        (
-                            application.CompanyName + " " +
-                            application.JobTitle + " " +
-                            application.Location
-                        ).toLowerCase();
-
-                    var matchesSearch =
-                        searchableText.includes(searchText);
-
-                    return matchesStatus && matchesSearch;
-                });
-
-            SortApplications();
-            DisplayApplications();
-        }
-
-
-        function SortApplications() {
-
-            var selectedSort =
-                $("#applicationSort").val();
-
-            filteredApplications.sort(
-                function (firstApplication, secondApplication) {
-
-                    if (selectedSort == "dateNewest") {
-
-                        return new Date(
-                            secondApplication.DateApplied
-                        ) -
-                            new Date(
-                                firstApplication.DateApplied
-                            );
-                    }
-
-                    if (selectedSort == "dateOldest") {
-
-                        return new Date(
-                            firstApplication.DateApplied
-                        ) -
-                            new Date(
-                                secondApplication.DateApplied
-                            );
-                    }
-
-                    if (selectedSort ==
-                        "companyAscending") {
-
-                        return firstApplication.CompanyName
-                            .localeCompare(
-                                secondApplication.CompanyName
-                            );
-                    }
-
-                    return secondApplication.CompanyName
-                        .localeCompare(
-                            firstApplication.CompanyName
-                        );
-                }
-            );
-        }
-
-
-        function DisplayApplications() {
-
-            var tableBody =
-                $("#applicationsTableBody");
-
-            tableBody.empty();
-
-            if (filteredApplications.length == 0) {
-
-                tableBody.append(
-                    "<tr>" +
-                    "<td colspan='8'>" +
-                    "No applications were found." +
-                    "</td>" +
-                    "</tr>"
-                );
-
-                $("#applicationCountMessage")
-                    .text("Showing 0 applications.");
-
-                return;
-            }
-
-            filteredApplications.forEach(
-                function (application) {
-
-                    var statusClass =
-                        GetStatusClass(
-                            application.ApplicationStatus
-                        );
-
-                    var row =
-                        "<tr>" +
-
-                        "<td class='companyName'>" +
-                        EscapeHtml(
-                            application.CompanyName
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        EscapeHtml(
-                            application.JobTitle
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        EscapeHtml(
-                            application.Location || ""
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.DateApplied
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        "<span class='statusBadge " +
-                        statusClass +
-                        "'>" +
-                        EscapeHtml(
-                            application.ApplicationStatus
-                        ) +
-                        "</span>" +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.FollowUpDate
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.UpdatedAt
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        BuildApplicationActions(
-                            application.ApplicationId
-                        ) +
-                        "</td>" +
-
-                        "</tr>";
-
-                    tableBody.append(row);
-                }
-            );
-
-            $("#applicationCountMessage").text(
-                "Showing " +
-                filteredApplications.length +
-                " applications."
-            );
-        }
-
-
-        function BuildApplicationActions(applicationId) {
-
-            return (
-                "<div class='actionArea'>" +
-
-                "<a class='actionLink' " +
-                "href='application-details.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Details" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='application-documents.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Documents" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='application-recruiters.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Recruiter" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='edit-application.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Edit" +
-                "</a>" +
-
-                "<div class='moreMenuWrapper'>" +
-
-                "<button type='button' " +
-                "class='moreButton' " +
-                "onclick='ToggleMoreMenu(" +
-                applicationId +
-                ");'>" +
-                "&hellip;" +
-                "</button>" +
-
-                "<div class='moreMenu' " +
-                "id='moreMenu" +
-                applicationId +
-                "'>" +
-
-                "<button type='button' " +
-                "onclick='ArchiveApplication(" +
-                applicationId +
-                ");'>" +
-                "Archive" +
-                "</button>" +
-
-                "<button type='button' " +
-                "class='deleteAction' " +
-                "onclick='DeleteApplication(" +
-                applicationId +
-                ");'>" +
-                "Delete" +
-                "</button>" +
-
-                "</div>" +
-
-                "</div>" +
-
-                "</div>"
-            );
-        }
-
-
-        function ToggleMoreMenu(applicationId) {
-
-            $(".moreMenu").not(
-                "#moreMenu" + applicationId
-            ).hide();
-
-            $("#moreMenu" + applicationId).toggle();
-        }
-
-
-        function GetStatusClass(status) {
-
-            if (status == "Interview") {
-                return "statusInterview";
-            }
-
-            if (status == "Offer") {
-                return "statusOffer";
-            }
-
-            if (status == "Rejected") {
-                return "statusRejected";
-            }
-
-            if (status == "Archived") {
-                return "statusArchived";
-            }
-
-            return "statusApplied";
-        }
-
-
-        function UpdateSummaryCards() {
-
-            var activeCount = 0;
-            var interviewCount = 0;
-            var offerCount = 0;
-            var rejectedCount = 0;
-            var archivedCount = 0;
-
-            allApplications.forEach(function (application) {
-
-                if (application.ApplicationStatus ==
-                    "Interview") {
-
-                    interviewCount++;
-                    activeCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Offer") {
-
-                    offerCount++;
-                    activeCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Rejected") {
-
-                    rejectedCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Archived") {
-
-                    archivedCount++;
-                }
-                else {
-                    activeCount++;
-                }
-            });
-
-            $("#activeApplicationCount").text(activeCount);
-            $("#interviewCount").text(interviewCount);
-            $("#offerCount").text(offerCount);
-            $("#rejectedCount").text(rejectedCount);
-            $("#archivedCount").text(archivedCount);
-        }
-
-
-        function FormatDate(value) {
-
-            if (!value) {
-                return "—";
-            }
-
-            var date = new Date(value);
-
-            if (isNaN(date.getTime())) {
-                return value;
-            }
-
-            return date.toLocaleDateString();
-        }
-
-
-        function EscapeHtml(value) {
-
-            return $("<div>")
-                .text(value || "")
-                .html();
-        }
-
-
-        function ArchiveApplication(applicationId) {
-
-            $(".moreMenu").hide();
-
-            alert(
-                "Archive functionality will be connected next. " +
-                "Application ID: " +
-                applicationId
-            );
-        }
-
-
-        function DeleteApplication(applicationId) {
-
-            $(".moreMenu").hide();
-
-            alert(
-                "Delete functionality will be connected later. " +
-                "Application ID: " +
-                applicationId
-            );
-        }
-
-
-        function PreviousPage() {
-            alert("Pagination will be connected later.");
-        }
-
-
-        function NextPage() {
-            alert("Pagination will be connected later.");
-        }
-
-
-        function ShowPageError(message) {
-
-            $("#pageMessage")
-                .removeClass("successMessage")
-                .addClass("errorMessage")
-                .text(message);
-        }
-
-
-        $(document).click(function (event) {
-
-            if (!$(event.target).closest(
-                ".moreMenuWrapper"
-            ).length) {
-
-                $(".moreMenu").hide();
-            }
-        });</script>
 
 </body>
 </html>

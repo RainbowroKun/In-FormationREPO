@@ -1,14 +1,7 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using MySql.Data;
-using MySql.Data.MySqlClient;
+﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Drawing;
-using System.Globalization;
-using System.Linq;
-using System.Transactions;
-using System.Web;
 using System.Web.Services;
 
 namespace JobApplicationTracker
@@ -105,14 +98,12 @@ namespace JobApplicationTracker
 						) AS existing_accounts
 						WHERE email = @email OR username = @username;";
 
-                    using (MySqlCommand duplicateCommand =
-                        new MySqlCommand(duplicateQuery, con))
+                    using (MySqlCommand duplicateCommand = new MySqlCommand(duplicateQuery, con))
                     {
                         duplicateCommand.Parameters.AddWithValue("@email", email.Trim());
                         duplicateCommand.Parameters.AddWithValue("@username", username.Trim());
 
-                        int duplicateCount =
-                            Convert.ToInt32(duplicateCommand.ExecuteScalar());
+                        int duplicateCount = Convert.ToInt32(duplicateCommand.ExecuteScalar());
 
                         if (duplicateCount > 0)
                         {
@@ -126,19 +117,16 @@ namespace JobApplicationTracker
 						VALUES
 						(@firstName, @lastName, @email, @username, @password, 'pending');";
 
-                    using (MySqlCommand insertCommand =
-                        new MySqlCommand(insertQuery, con))
+                    using (MySqlCommand insertCommand = new MySqlCommand(insertQuery, con))
                     {
                         insertCommand.Parameters.AddWithValue("@firstName", firstName.Trim());
                         insertCommand.Parameters.AddWithValue("@lastName", lastName.Trim());
                         insertCommand.Parameters.AddWithValue("@email", email.Trim());
                         insertCommand.Parameters.AddWithValue("@username", username.Trim());
                         insertCommand.Parameters.AddWithValue("@password", password);
-
                         insertCommand.ExecuteNonQuery();
                     }
                 }
-
                 return "Account request has been submitted. We will review the request as soon as we can!";
             }
             catch (Exception e)
@@ -156,7 +144,7 @@ namespace JobApplicationTracker
                 MySqlConnection con = new MySqlConnection(getConString());
                 con.Open();
 
-                string sql = "    SELECT user_id, first_name, last_name, role FROM users WHERE username = @username AND pass = @password AND active_status = 1";
+                string sql = "SELECT user_id, first_name, last_name, role FROM users WHERE username = @username AND pass = @password AND active_status = 1";
 
                 MySqlCommand cmd = new MySqlCommand(sql, con);
                 cmd.Parameters.AddWithValue("@username", username);
@@ -210,14 +198,7 @@ namespace JobApplicationTracker
             using (MySqlConnection con = new MySqlConnection(getConString()))
             {
                 string query = @"
-					SELECT
-						request_id,
-						first_name,
-						last_name,
-						email,
-						username,
-						status,
-						requested_at
+					SELECT request_id, first_name, last_name, email, username, status, requested_at
 					FROM account_requests
 					WHERE status = 'pending'
 					ORDER BY requested_at ASC;";
@@ -247,24 +228,14 @@ namespace JobApplicationTracker
                         string createUserQuery = @"
 							INSERT INTO users
 							(first_name, last_name, email, username, pass, role, active_status)
-							SELECT
-								first_name,
-								last_name,
-								email,
-								username,
-								pass,
-								'user',
-								TRUE
+							SELECT first_name, last_name, email, username, pass, 'user', TRUE
 							FROM account_requests
 							WHERE request_id = @requestId
 							  AND status = 'pending';";
 
-                        using (MySqlCommand createUserCommand =
-                            new MySqlCommand(createUserQuery, con, transaction))
+                        using (MySqlCommand createUserCommand = new MySqlCommand(createUserQuery, con, transaction))
                         {
-                            createUserCommand.Parameters.AddWithValue(
-                                "@requestId", requestId);
-
+                            createUserCommand.Parameters.AddWithValue("@requestId", requestId);
                             int usersCreated = createUserCommand.ExecuteNonQuery();
 
                             if (usersCreated == 0)
@@ -279,11 +250,9 @@ namespace JobApplicationTracker
 							SET status = 'approved'
 							WHERE request_id = @requestId;";
 
-                        using (MySqlCommand updateRequestCommand =
-                            new MySqlCommand(updateRequestQuery, con, transaction))
+                        using (MySqlCommand updateRequestCommand = new MySqlCommand(updateRequestQuery, con, transaction))
                         {
-                            updateRequestCommand.Parameters.AddWithValue(
-                                "@requestId", requestId);
+                            updateRequestCommand.Parameters.AddWithValue("@requestId", requestId);
 
                             updateRequestCommand.ExecuteNonQuery();
                         }
@@ -355,8 +324,7 @@ namespace JobApplicationTracker
             string lastName = Session["lastName"].ToString();
             string role = Session["role"].ToString();
 
-            role = char.ToUpper(role[0]) +
-                role.Substring(1).ToLower();
+            role = char.ToUpper(role[0]) + role.Substring(1).ToLower();
 
             return firstName + " " + lastName + " | " + role;
         }
@@ -390,7 +358,7 @@ namespace JobApplicationTracker
             string coverLetterBase64,
             string coverLetterNotes)
 
-            //Check if you are logged in
+        //Check if you are logged in
         {
             if (Session["userId"] == null)
             {
@@ -417,23 +385,17 @@ namespace JobApplicationTracker
             object recruiterFollowUpValue;
             object recruiterLastContactValue;
 
-            if (!TryGetOptionalDate(
-                followUpDate,
-                out applicationFollowUpValue))
+            if (!TryGetOptionalDate(followUpDate, out applicationFollowUpValue))
             {
                 return "The application follow-up date is invalid.";
             }
 
-            if (!TryGetOptionalDate(
-                recruiterFollowUpDate,
-                out recruiterFollowUpValue))
+            if (!TryGetOptionalDate(recruiterFollowUpDate, out recruiterFollowUpValue))
             {
                 return "The recruiter follow-up date is invalid.";
             }
 
-            if (!TryGetOptionalDate(
-                recruiterLastContactDate,
-                out recruiterLastContactValue))
+            if (!TryGetOptionalDate(recruiterLastContactDate, out recruiterLastContactValue))
             {
                 return "The recruiter last-contact date is invalid.";
             }
@@ -476,210 +438,79 @@ namespace JobApplicationTracker
 
             try
             {
-                resumeData =
-                    DecodeOptionalFile(
-                        resumeFileName,
-                        resumeBase64);
-
-                coverLetterData =
-                    DecodeOptionalFile(
-                        coverLetterFileName,
-                        coverLetterBase64);
+                resumeData = DecodeOptionalFile(resumeFileName, resumeBase64);
+                coverLetterData = DecodeOptionalFile(coverLetterFileName, coverLetterBase64);
             }
             catch (Exception ex)
             {
                 return ex.Message;
             }
 
-            int userId =
-                Convert.ToInt32(Session["userId"]);
+            int userId = Convert.ToInt32(Session["userId"]);
 
             // Upload into each table
-            using (MySqlConnection con =
-                new MySqlConnection(getConString()))
+            using (MySqlConnection con = new MySqlConnection(getConString()))
             {
                 con.Open();
 
-                using (MySqlTransaction transaction =
-                    con.BeginTransaction())
+                using (MySqlTransaction transaction = con.BeginTransaction())
                 {
                     try
                     {
                         string applicationSql = @"
-                    INSERT INTO applications
-                    (
-                        user_id,
-                        company_name,
-                        job_title,
-                        location,
-                        date_applied,
-                        application_status,
-                        job_posting_url,
-                        follow_up_date,
-                        notes
-                    )
-                    VALUES
-                    (
-                        @userId,
-                        @companyName,
-                        @jobTitle,
-                        @location,
-                        @dateApplied,
-                        @applicationStatus,
-                        @jobPostingUrl,
-                        @followUpDate,
-                        @notes
-                    );";
+                            INSERT INTO applications
+                                (user_id, company_name, job_title, location, date_applied, application_status, job_posting_url, follow_up_date, notes)
+                            VALUES
+                                (@userId, @companyName, @jobTitle, @location, @dateApplied, @applicationStatus, @jobPostingUrl, @followUpDate, @notes);";
 
-                        MySqlCommand applicationCommand =
-                            new MySqlCommand(
-                                applicationSql,
-                                con,
-                                transaction);
+                        MySqlCommand applicationCommand = new MySqlCommand(applicationSql, con, transaction);
 
-                        applicationCommand.Parameters.AddWithValue(
-                            "@userId",
-                            userId);
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@companyName",
-                            companyName.Trim());
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@jobTitle",
-                            jobTitle.Trim());
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@location",
-                            EmptyToNull(location));
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@dateApplied",
-                            parsedDateApplied);
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@applicationStatus",
-                            applicationStatus);
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@jobPostingUrl",
-                            EmptyToNull(jobPostingUrl));
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@followUpDate",
-                            applicationFollowUpValue);
-
-                        applicationCommand.Parameters.AddWithValue(
-                            "@notes",
-                            EmptyToNull(applicationNotes));
+                        applicationCommand.Parameters.AddWithValue("@userId", userId);
+                        applicationCommand.Parameters.AddWithValue("@companyName", companyName.Trim());
+                        applicationCommand.Parameters.AddWithValue("@jobTitle", jobTitle.Trim());
+                        applicationCommand.Parameters.AddWithValue("@location", EmptyToNull(location));
+                        applicationCommand.Parameters.AddWithValue("@dateApplied", parsedDateApplied);
+                        applicationCommand.Parameters.AddWithValue("@applicationStatus", applicationStatus);
+                        applicationCommand.Parameters.AddWithValue("@jobPostingUrl", EmptyToNull(jobPostingUrl));
+                        applicationCommand.Parameters.AddWithValue("@followUpDate", applicationFollowUpValue);
+                        applicationCommand.Parameters.AddWithValue("@notes", EmptyToNull(applicationNotes));
 
                         applicationCommand.ExecuteNonQuery();
 
-                        int applicationId =
-                            Convert.ToInt32(
-                                applicationCommand.LastInsertedId);
+                        int applicationId = Convert.ToInt32(applicationCommand.LastInsertedId);
 
                         if (hasRecruiterInformation)
                         {
                             string recruiterSql = @"
-                        INSERT INTO recruiters
-                        (
-                            application_id,
-                            first_name,
-                            last_name,
-                            company_name,
-                            email,
-                            phone,
-                            follow_up_reminder_date,
-                            last_contact_date,
-                            notes
-                        )
-                        VALUES
-                        (
-                            @applicationId,
-                            @firstName,
-                            @lastName,
-                            @companyName,
-                            @email,
-                            @phone,
-                            @followUpDate,
-                            @lastContactDate,
-                            @notes
-                        );";
+                                INSERT INTO recruiters
+                                    (application_id, first_name, last_name, company_name, email, 
+                                    phone, follow_up_reminder_date, last_contact_date, notes)
+                                VALUES
+                                    (@applicationId, @firstName, @lastName, @companyName, @email, 
+                                    @phone, @followUpDate, @lastContactDate, @notes);";
 
-                            MySqlCommand recruiterCommand =
-                                new MySqlCommand(
-                                    recruiterSql,
-                                    con,
-                                    transaction);
+                            MySqlCommand recruiterCommand = new MySqlCommand(recruiterSql, con, transaction);
 
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@applicationId",
-                                applicationId);
+                            recruiterCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                            recruiterCommand.Parameters.AddWithValue("@firstName", recruiterFirstName.Trim());
+                            recruiterCommand.Parameters.AddWithValue("@lastName", recruiterLastName.Trim());
 
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@firstName",
-                                recruiterFirstName.Trim());
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@lastName",
-                                recruiterLastName.Trim());
-
-                            /*
-                                Your recruiters table requires company_name.
-                                It uses the company entered for the application.
-                            */
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@companyName",
-                                companyName.Trim());
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@email",
-                                recruiterEmail.Trim());
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@phone",
-                                EmptyToNull(recruiterPhone));
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@followUpDate",
-                                recruiterFollowUpValue);
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@lastContactDate",
-                                recruiterLastContactValue);
-
-                            recruiterCommand.Parameters.AddWithValue(
-                                "@notes",
-                                EmptyToNull(recruiterNotes));
+                            /* Your recruiters table requires company_name. It uses the company entered for the application. */
+                            recruiterCommand.Parameters.AddWithValue("@companyName", companyName.Trim());
+                            recruiterCommand.Parameters.AddWithValue("@email", recruiterEmail.Trim());
+                            recruiterCommand.Parameters.AddWithValue("@phone", EmptyToNull(recruiterPhone));
+                            recruiterCommand.Parameters.AddWithValue("@followUpDate", recruiterFollowUpValue);
+                            recruiterCommand.Parameters.AddWithValue("@lastContactDate", recruiterLastContactValue);
+                            recruiterCommand.Parameters.AddWithValue("@notes", EmptyToNull(recruiterNotes));
 
                             recruiterCommand.ExecuteNonQuery();
                         }
 
-                        InsertApplicationDocument(
-                            con,
-                            transaction,
-                            userId,
-                            applicationId,
-                            "Resume",
-                            resumeFileName,
-                            resumeContentType,
-                            resumeData,
-                            resumeNotes,
-                            null);
+                        InsertApplicationDocument(con, transaction, userId, applicationId, "Resume", resumeFileName,
+                            resumeContentType, resumeData, resumeNotes, null);
 
-                        InsertApplicationDocument(
-                            con,
-                            transaction,
-                            userId,
-                            applicationId,
-                            "Cover Letter",
-                            coverLetterFileName,
-                            coverLetterContentType,
-                            coverLetterData,
-                            coverLetterNotes,
-                            null
-                        );
+                        InsertApplicationDocument(con, transaction, userId, applicationId, "Cover Letter", coverLetterFileName,
+                            coverLetterContentType, coverLetterData, coverLetterNotes, null);
 
                         transaction.Commit();
 
@@ -689,8 +520,7 @@ namespace JobApplicationTracker
                     {
                         transaction.Rollback();
 
-                        return "Unable to save the application. Error: " +
-                            ex.Message;
+                        return "Unable to save the application. Error: " + ex.Message;
                     }
                 }
             }
@@ -712,9 +542,7 @@ namespace JobApplicationTracker
         }
 
         //Changing the optional date to null
-        private bool TryGetOptionalDate(
-            string value,
-            out object databaseValue)
+        private bool TryGetOptionalDate(string value, out object databaseValue)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -724,8 +552,7 @@ namespace JobApplicationTracker
 
             DateTime parsedDate;
 
-            bool validDate =
-                DateTime.TryParse(value, out parsedDate);
+            bool validDate = DateTime.TryParse(value, out parsedDate);
 
             if (!validDate)
             {
@@ -737,35 +564,25 @@ namespace JobApplicationTracker
             return true;
         }
 
-        private byte[] DecodeOptionalFile(
-            string fileName,
-            string base64)
+        private byte[] DecodeOptionalFile(string fileName, string base64)
         {
-            if (string.IsNullOrWhiteSpace(fileName) &&
-                string.IsNullOrWhiteSpace(base64))
+            if (string.IsNullOrWhiteSpace(fileName) && string.IsNullOrWhiteSpace(base64))
             {
                 return null;
             }
 
-            if (string.IsNullOrWhiteSpace(fileName) ||
-                string.IsNullOrWhiteSpace(base64))
+            if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(base64))
             {
-                throw new Exception(
-                    "One of the selected files could not be read."
-                );
+                throw new Exception("One of the selected files could not be read.");
             }
 
-            byte[] fileData =
-                Convert.FromBase64String(base64);
+            byte[] fileData = Convert.FromBase64String(base64);
 
-            int maximumFileSize =
-                5 * 1024 * 1024;
+            int maximumFileSize = 5 * 1024 * 1024;
 
             if (fileData.Length > maximumFileSize)
             {
-                throw new Exception(
-                    fileName + " is larger than the 5 MB limit."
-                );
+                throw new Exception(fileName + " is larger than the 5 MB limit.");
             }
 
             return fileData;
@@ -789,104 +606,40 @@ namespace JobApplicationTracker
             }
 
             string documentSql = @"
-        INSERT INTO documents
-        (
-            user_id,
-            document_type,
-            file_name,
-            content_type,
-            file_size,
-            file_data,
-            notes
-        )
-        VALUES
-        (
-            @userId,
-            @documentType,
-            @fileName,
-            @contentType,
-            @fileSize,
-            @fileData,
-            @documentNotes
-        );";
+                INSERT INTO documents
+                    (user_id, document_type, file_name, content_type, file_size, file_data, notes)
+                VALUES
+                    (@userId, @documentType, @fileName, @contentType, @fileSize, @fileData, @documentNotes);";
 
-        int documentId;
+            int documentId;
 
-        using (MySqlCommand documentCommand =
-            new MySqlCommand(
-                documentSql,
-                con,
-                transaction))
-        {
-            documentCommand.Parameters.AddWithValue(
-                "@userId",
-                userId);
-
-            documentCommand.Parameters.AddWithValue(
-                "@documentType",
-                documentType);
-
-            documentCommand.Parameters.AddWithValue(
-                "@fileName",
-                fileName);
-
-            documentCommand.Parameters.AddWithValue(
-                "@contentType",
-                string.IsNullOrWhiteSpace(contentType)
-                    ? "application/octet-stream"
-                    : contentType);
-
-            documentCommand.Parameters.AddWithValue(
-                "@fileSize",
-                fileData.Length);
-
-            documentCommand.Parameters.AddWithValue(
-                "@fileData",
-                fileData);
-
-            documentCommand.Parameters.AddWithValue(
-                "@documentNotes",
-                EmptyToNull(documentNotes));
-
-            documentCommand.ExecuteNonQuery();
-
-            documentId =
-                Convert.ToInt32(
-                    documentCommand.LastInsertedId
-                );
-        }
-
-        string linkSql = @"
-        INSERT INTO application_documents
-        (
-            application_id,
-            document_id,
-            application_notes
-        )
-        VALUES
-        (
-            @applicationId,
-            @documentId,
-            @applicationNotes
-        );";
-
-            using (MySqlCommand linkCommand =
-                new MySqlCommand(
-                    linkSql,
-                    con,
-                    transaction))
+            using (MySqlCommand documentCommand = new MySqlCommand(documentSql, con, transaction))
             {
-                linkCommand.Parameters.AddWithValue(
-                    "@applicationId",
-                    applicationId);
+                documentCommand.Parameters.AddWithValue("@userId", userId);
+                documentCommand.Parameters.AddWithValue("@documentType", documentType);
+                documentCommand.Parameters.AddWithValue("@fileName", fileName);
+                documentCommand.Parameters.AddWithValue("@contentType", string.IsNullOrWhiteSpace(contentType)
+                        ? "application/octet-stream" : contentType);
+                documentCommand.Parameters.AddWithValue("@fileSize", fileData.Length);
+                documentCommand.Parameters.AddWithValue("@fileData", fileData);
+                documentCommand.Parameters.AddWithValue("@documentNotes", EmptyToNull(documentNotes));
 
-                linkCommand.Parameters.AddWithValue(
-                    "@documentId",
-                    documentId);
+                documentCommand.ExecuteNonQuery();
 
-                linkCommand.Parameters.AddWithValue(
-                    "@applicationNotes",
-                    EmptyToNull(applicationNotes));
+                documentId = Convert.ToInt32(documentCommand.LastInsertedId);
+            }
+
+            string linkSql = @"
+                INSERT INTO application_documents
+                    (application_id, document_id, application_notes)
+                VALUES
+                    (@applicationId, @documentId, @applicationNotes);";
+
+            using (MySqlCommand linkCommand = new MySqlCommand(linkSql, con, transaction))
+            {
+                linkCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                linkCommand.Parameters.AddWithValue("@documentId", documentId);
+                linkCommand.Parameters.AddWithValue("@applicationNotes", EmptyToNull(applicationNotes));
 
                 linkCommand.ExecuteNonQuery();
             }
@@ -895,78 +648,54 @@ namespace JobApplicationTracker
         ////////////////////////////////////////////////////////////////////////
         /// View Applications Function
         ////////////////////////////////////////////////////////////////////////
-        
         [WebMethod(EnableSession = true)]
         public List<ApplicationSummary> GetApplications()
         {
+            if (Session["userId"] == null)
+            {
+                return new List<ApplicationSummary>();
+            }
 
             int userId =
                 Convert.ToInt32(
                     Session["userId"]
                 );
 
-            List<ApplicationSummary> applications =
-                new List<ApplicationSummary>();
+            List<ApplicationSummary> applications = new List<ApplicationSummary>();
 
-            using (
-                MySqlConnection con =
-                    new MySqlConnection(
-                        getConString()
-                    )
-            )
+            using (MySqlConnection con = new MySqlConnection(getConString()))
             {
                 con.Open();
 
                 string query = @"
-            SELECT
-                application_id,
-                company_name,
-                job_title,
-                location,
-                date_applied,
-                application_status,
-                follow_up_date,
-                is_archived,
-                updated_at
-            FROM applications
-            WHERE user_id = @userId
-            ORDER BY date_applied DESC,
-                     application_id DESC;";
+                    SELECT
+                        application_id, company_name, job_title, location, date_applied, application_status, follow_up_date, is_archived, updated_at
+                    FROM applications
+                    WHERE user_id = @userId
+                    ORDER BY
+                        date_applied DESC,
+                        application_id DESC;";
 
-                using (
-                    MySqlCommand command =
-                        new MySqlCommand(
-                            query,
-                            con
-                        )
-                )
+                using (MySqlCommand command = new MySqlCommand(query, con))
                 {
-                    command.Parameters.AddWithValue("@userId",userId);
+                    command.Parameters.AddWithValue("@userId", userId);
 
-                    using (
-                        MySqlDataReader reader =command.ExecuteReader()
-                    )
+                    using (MySqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
                             ApplicationSummary application = new ApplicationSummary();
 
-                            application.ApplicationId =Convert.ToInt32(reader["application_id"]);
-
+                            application.ApplicationId = Convert.ToInt32(reader["application_id"]);
                             application.CompanyName = Convert.ToString(reader["company_name"]);
-
                             application.JobTitle = Convert.ToString(reader["job_title"]);
-
-                            application.Location = reader["location"] == DBNull.Value ? "" : Convert.ToString(reader["location"]);
-
+                            application.Location = reader["location"] == DBNull.Value
+                                    ? "" : Convert.ToString(reader["location"]);
                             application.DateApplied = Convert.ToDateTime(reader["date_applied"]).ToString("yyyy-MM-dd");
-
-                            application.ApplicationStatus =Convert.ToString(reader["application_status"]);
-
-                            application.FollowUpDate = reader["follow_up_date"] == DBNull.Value? "": Convert.ToDateTime(reader["follow_up_date"]).ToString("yyyy-MM-dd");
-
+                            application.ApplicationStatus = Convert.ToString(reader["application_status"]);
+                            application.FollowUpDate = reader["follow_up_date"] == DBNull.Value
+                                    ? "" : Convert.ToDateTime(reader["follow_up_date"]).ToString("yyyy-MM-dd");
                             application.IsArchived = Convert.ToBoolean(reader["is_archived"]);
-
                             application.UpdatedAt = Convert.ToDateTime(reader["updated_at"]).ToString("yyyy-MM-dd HH:mm:ss");
 
                             applications.Add(application);
@@ -981,7 +710,7 @@ namespace JobApplicationTracker
         public class ApplicationSummary
         {
             public int ApplicationId
-            {get; set;}
+            { get; set; }
             public string CompanyName
             { get; set; }
             public string JobTitle
@@ -994,221 +723,390 @@ namespace JobApplicationTracker
             { get; set; }
             public string FollowUpDate
             { get; set; }
-            public bool IsArchived { get; set; }
-            public string UpdatedAt { get; set; }
+            public bool IsArchived
+            { get; set; }
+            public string UpdatedAt
+            { get; set; }
         }
 
         ////////////////////////////////////////////////////////////////////////
-        /// Add Recruiter Function
+        /// Documents Function
         ////////////////////////////////////////////////////////////////////////
+
         [WebMethod(EnableSession = true)]
-
-        
-        public string AddRecruiter(
-    int applicationId,
-    string firstName,
-    string lastName,
-    string companyName,
-    string email,
-    string phone,
-    string followUpReminderDate,
-    string lastContactDate,
-    string notes)
-{
-    if (applicationId <= 0)
-    {
-        return "A valid job application is required.";
-    }
-
-    if (string.IsNullOrWhiteSpace(firstName) ||
-        string.IsNullOrWhiteSpace(lastName) ||
-        string.IsNullOrWhiteSpace(companyName) ||
-        string.IsNullOrWhiteSpace(email))
-    {
-        return "Please complete all required fields.";
-    }
-
-    try
-    {
-        using (MySqlConnection con = new MySqlConnection(getConString()))
+        public ApplicationDocumentsResult GetApplicationDocuments(int applicationId)
         {
-            con.Open();
-
-            string query = @"
-                INSERT INTO recruiters
-                (
-                    application_id,
-                    first_name,
-                    last_name,
-                    company_name,
-                    email,
-                    phone,
-                    follow_up_reminder_date,
-                    last_contact_date,
-                    notes
-                )
-                VALUES
-                (
-                    @applicationId,
-                    @firstName,
-                    @lastName,
-                    @companyName,
-                    @email,
-                    @phone,
-                    @followUpReminderDate,
-                    @lastContactDate,
-                    @notes
-                );";
-
-            using (MySqlCommand cmd = new MySqlCommand(query, con))
+            if (Session["userId"] == null)
             {
-                cmd.Parameters.AddWithValue("@applicationId", applicationId);
-                cmd.Parameters.AddWithValue("@firstName", firstName.Trim());
-                cmd.Parameters.AddWithValue("@lastName", lastName.Trim());
-                cmd.Parameters.AddWithValue("@companyName", companyName.Trim());
-                cmd.Parameters.AddWithValue("@email", email.Trim());
-
-                cmd.Parameters.AddWithValue(
-                    "@phone",
-                    string.IsNullOrWhiteSpace(phone)
-                        ? (object)DBNull.Value
-                        : phone.Trim());
-
-                cmd.Parameters.AddWithValue(
-                    "@followUpReminderDate",
-                    string.IsNullOrWhiteSpace(followUpReminderDate)
-                        ? (object)DBNull.Value
-                        : DateTime.Parse(followUpReminderDate));
-
-                cmd.Parameters.AddWithValue(
-                    "@lastContactDate",
-                    string.IsNullOrWhiteSpace(lastContactDate)
-                        ? (object)DBNull.Value
-                        : DateTime.Parse(lastContactDate));
-
-                cmd.Parameters.AddWithValue(
-                    "@notes",
-                    string.IsNullOrWhiteSpace(notes)
-                        ? (object)DBNull.Value
-                        : notes.Trim());
-
-                cmd.ExecuteNonQuery();
+                return null;
             }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            ApplicationDocumentsResult result = null;
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string applicationSql = @"
+                    SELECT
+                        application_id, company_name, job_title, location, date_applied, application_status, job_posting_url, follow_up_date, is_archived
+                    FROM applications
+                    WHERE application_id = @applicationId
+                      AND user_id = @userId;";
+
+                using (MySqlCommand applicationCommand = new MySqlCommand(applicationSql, con))
+                {
+                    applicationCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                    applicationCommand.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = applicationCommand.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            return null;
+                        }
+
+                        result = new ApplicationDocumentsResult();
+
+                        result.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                        result.CompanyName = Convert.ToString(reader["company_name"]);
+                        result.JobTitle = Convert.ToString(reader["job_title"]);
+                        result.Location = reader["location"] == DBNull.Value
+                            ? "" : Convert.ToString(reader["location"]);
+                        result.DateApplied = Convert.ToDateTime(reader["date_applied"]
+                            ).ToString("yyyy-MM-dd");
+                        result.ApplicationStatus = Convert.ToString(reader["application_status"]);
+                        result.JobPostingUrl = reader["job_posting_url"] == DBNull.Value
+                                ? "" : Convert.ToString(reader["job_posting_url"]);
+                        result.FollowUpDate = reader["follow_up_date"] == DBNull.Value
+                                ? "" : Convert.ToDateTime(reader["follow_up_date"]).ToString("yyyy-MM-dd");
+                        result.IsArchived = Convert.ToBoolean(reader["is_archived"]);
+                        result.Documents = new List<ApplicationDocumentSummary>();
+                    }
+                }
+
+                string documentsSql = @"
+                    SELECT
+                        d.document_id, d.document_type, d.file_name, d.file_size, d.notes, d.uploaded_at
+                    FROM documents d
+                    INNER JOIN application_documents ad
+                        ON d.document_id = ad.document_id
+                    WHERE ad.application_id = @applicationId
+                      AND d.user_id = @userId
+                    ORDER BY d.uploaded_at DESC;";
+
+                using (MySqlCommand documentsCommand = new MySqlCommand(documentsSql, con))
+                {
+                    documentsCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                    documentsCommand.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = documentsCommand.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            ApplicationDocumentSummary document = new ApplicationDocumentSummary();
+
+                            document.DocumentId = Convert.ToInt32(reader["document_id"]);
+                            document.DocumentType = Convert.ToString(reader["document_type"]);
+                            document.FileName = Convert.ToString(reader["file_name"]);
+                            document.FileSize = Convert.ToInt32(reader["file_size"]);
+                            document.Notes = reader["notes"] == DBNull.Value
+                                    ? "" : Convert.ToString(reader["notes"]);
+                            document.UploadedAt = Convert.ToDateTime(reader["uploaded_at"]).ToString("yyyy-MM-dd HH:mm:ss");
+
+                            result.Documents.Add(
+                                document
+                            );
+                        }
+                    }
+                }
+            }
+
+            return result;
         }
 
-        return "Recruiter information saved successfully.";
-    }
-    catch (FormatException)
-    {
-        return "One or more dates were entered incorrectly.";
-    }
-    catch (Exception e)
-    {
-        return "Unable to save recruiter information. Error: " + e.Message;
-    }
-}
-            documentCommand.ExecuteNonQuery();
-        }
-		        [WebMethod(EnableSession = true)]
+        [WebMethod(EnableSession = true)]
         public string UploadApplicationDocument(
             int applicationId,
             string documentType,
             string fileName,
             string contentType,
-            int fileSize,
-            string fileData,
-            string notes)
+            string fileBase64,
+            string documentNotes,
+            string applicationNotes)
         {
-            if (Session["username"] == null)
+            if (Session["userId"] == null)
             {
                 return "Please log in first.";
             }
 
+            if (applicationId <= 0)
+            {
+                return "A valid application is required.";
+            }
+
             if (string.IsNullOrWhiteSpace(documentType) ||
                 string.IsNullOrWhiteSpace(fileName) ||
-                string.IsNullOrWhiteSpace(fileData))
+                string.IsNullOrWhiteSpace(fileBase64))
             {
                 return "Please select a document type and file.";
             }
 
+            byte[] documentBytes;
+
             try
             {
-                byte[] documentBytes = Convert.FromBase64String(fileData);
-                string username = Session["username"].ToString();
-
-                using (MySqlConnection con =
-                    new MySqlConnection(getConString()))
-                {
-                    con.Open();
-
-                    string query = @"
-                        INSERT INTO application_documents
-                        (
-                            application_id,
-                            document_type,
-                            file_name,
-                            content_type,
-                            file_size,
-                            file_data,
-                            notes
-                        )
-                        SELECT
-                            a.application_id,
-                            @documentType,
-                            @fileName,
-                            @contentType,
-                            @fileSize,
-                            @fileData,
-                            @notes
-                        FROM applications a
-                        INNER JOIN users u
-                            ON a.user_id = u.user_id
-                        WHERE a.application_id = @applicationId
-                          AND u.username = @username;";
-
-                    using (MySqlCommand cmd =
-                        new MySqlCommand(query, con))
-                    {
-                        cmd.Parameters.AddWithValue(
-                            "@applicationId", applicationId);
-                        cmd.Parameters.AddWithValue(
-                            "@documentType", documentType);
-                        cmd.Parameters.AddWithValue(
-                            "@fileName", fileName);
-                        cmd.Parameters.AddWithValue(
-                            "@contentType", contentType);
-                        cmd.Parameters.AddWithValue(
-                            "@fileSize", fileSize);
-                        cmd.Parameters.AddWithValue(
-                            "@fileData", documentBytes);
-                        cmd.Parameters.AddWithValue(
-                            "@notes", notes ?? "");
-                        cmd.Parameters.AddWithValue(
-                            "@username", username);
-
-                        int rowsAdded = cmd.ExecuteNonQuery();
-
-                        if (rowsAdded == 0)
-                        {
-                            return "Application was not found.";
-                        }
-                    }
-                }
-
-                return "Success";
+                documentBytes = Convert.FromBase64String(fileBase64);
             }
+
             catch (FormatException)
             {
                 return "The selected file could not be processed.";
             }
-            catch (Exception ex)
+
+            int maximumFileSize = 5 * 1024 * 1024;
+
+            if (documentBytes.Length > maximumFileSize)
             {
-                return "Unable to upload document. Error: " +
-                    ex.Message;
+                return fileName + " is larger than the 5 MB limit.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                using (MySqlTransaction transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        string ownershipSql = @"
+                            SELECT COUNT(*)
+                            FROM applications
+                            WHERE application_id = @applicationId
+                              AND user_id = @userId;";
+
+                        int applicationCount;
+
+                        using (MySqlCommand ownershipCommand = new MySqlCommand(ownershipSql, con, transaction))
+                        {
+                            ownershipCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                            ownershipCommand.Parameters.AddWithValue("@userId", userId);
+                            applicationCount = Convert.ToInt32(ownershipCommand.ExecuteScalar());
+                        }
+
+                        if (applicationCount == 0)
+                        {
+                            transaction.Rollback();
+
+                            return "Application was not found.";
+                        }
+
+                        string documentSql = @"
+                            INSERT INTO documents
+                                (user_id, document_type, file_name, content_type, file_size, file_data, notes)
+                            VALUES
+                                (@userId, @documentType, @fileName, @contentType, @fileSize, @fileData, @documentNotes);";
+
+                        int documentId;
+
+                        using (MySqlCommand documentCommand = new MySqlCommand(documentSql, con, transaction))
+                        {
+                            documentCommand.Parameters.AddWithValue("@userId", userId);
+                            documentCommand.Parameters.AddWithValue("@documentType", documentType.Trim());
+                            documentCommand.Parameters.AddWithValue("@fileName", fileName.Trim());
+                            documentCommand.Parameters.AddWithValue("@contentType",
+                                string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType.Trim());
+                            documentCommand.Parameters.AddWithValue("@fileSize", documentBytes.Length);
+                            documentCommand.Parameters.AddWithValue("@fileData", documentBytes);
+                            documentCommand.Parameters.AddWithValue("@documentNotes", EmptyToNull(documentNotes));
+
+                            documentCommand.ExecuteNonQuery();
+
+                            documentId = Convert.ToInt32(documentCommand.LastInsertedId);
+                        }
+
+                        string linkSql = @"
+                            INSERT INTO application_documents
+                                (application_id, document_id, application_notes)
+                            VALUES
+                                (@applicationId, @documentId, @applicationNotes);";
+
+                        using (MySqlCommand linkCommand = new MySqlCommand(linkSql, con, transaction))
+                        {
+                            linkCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                            linkCommand.Parameters.AddWithValue("@documentId", documentId);
+                            linkCommand.Parameters.AddWithValue("@applicationNotes", EmptyToNull(applicationNotes));
+
+                            linkCommand.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+
+                        return "Success";
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+
+                        return "Unable to upload document. Error: " + ex.Message;
+                    }
+                }
             }
         }
-	
-    }
 
+        public class ApplicationDocumentsResult
+        {
+            public int ApplicationId
+            { get; set; }
+            public string CompanyName
+            { get; set; }
+            public string JobTitle
+            { get; set; }
+            public string Location
+            { get; set; }
+            public string DateApplied
+            { get; set; }
+            public string ApplicationStatus
+            { get; set; }
+            public string JobPostingUrl
+            { get; set; }
+            public string FollowUpDate
+            { get; set; }
+            public bool IsArchived { get; set; }
+            public List<ApplicationDocumentSummary> Documents
+            { get; set; }
+        }
+
+        public class ApplicationDocumentSummary
+        {
+            public int DocumentId
+            { get; set; }
+            public string DocumentType
+            { get; set; }
+            public string FileName
+            { get; set; }
+            public int FileSize
+            { get; set; }
+            public string Notes
+            { get; set; }
+            public string UploadedAt
+            { get; set; }
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        /// Add Recruiter Function
+        ////////////////////////////////////////////////////////////////////////
+        //        [WebMethod(EnableSession = true)]
+
+
+        //        public string AddRecruiter(
+        //    int applicationId,
+        //    string firstName,
+        //    string lastName,
+        //    string companyName,
+        //    string email,
+        //    string phone,
+        //    string followUpReminderDate,
+        //    string lastContactDate,
+        //    string notes)
+        //{
+        //    if (applicationId <= 0)
+        //    {
+        //        return "A valid job application is required.";
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(firstName) ||
+        //        string.IsNullOrWhiteSpace(lastName) ||
+        //        string.IsNullOrWhiteSpace(companyName) ||
+        //        string.IsNullOrWhiteSpace(email))
+        //    {
+        //        return "Please complete all required fields.";
+        //    }
+
+        //    try
+        //    {
+        //        using (MySqlConnection con = new MySqlConnection(getConString()))
+        //        {
+        //            con.Open();
+
+        //            string query = @"
+        //                INSERT INTO recruiters
+        //                (
+        //                    application_id,
+        //                    first_name,
+        //                    last_name,
+        //                    company_name,
+        //                    email,
+        //                    phone,
+        //                    follow_up_reminder_date,
+        //                    last_contact_date,
+        //                    notes
+        //                )
+        //                VALUES
+        //                (
+        //                    @applicationId,
+        //                    @firstName,
+        //                    @lastName,
+        //                    @companyName,
+        //                    @email,
+        //                    @phone,
+        //                    @followUpReminderDate,
+        //                    @lastContactDate,
+        //                    @notes
+        //                );";
+
+        //            using (MySqlCommand cmd = new MySqlCommand(query, con))
+        //            {
+        //                cmd.Parameters.AddWithValue("@applicationId", applicationId);
+        //                cmd.Parameters.AddWithValue("@firstName", firstName.Trim());
+        //                cmd.Parameters.AddWithValue("@lastName", lastName.Trim());
+        //                cmd.Parameters.AddWithValue("@companyName", companyName.Trim());
+        //                cmd.Parameters.AddWithValue("@email", email.Trim());
+
+        //                cmd.Parameters.AddWithValue(
+        //                    "@phone",
+        //                    string.IsNullOrWhiteSpace(phone)
+        //                        ? (object)DBNull.Value
+        //                        : phone.Trim());
+
+        //                cmd.Parameters.AddWithValue(
+        //                    "@followUpReminderDate",
+        //                    string.IsNullOrWhiteSpace(followUpReminderDate)
+        //                        ? (object)DBNull.Value
+        //                        : DateTime.Parse(followUpReminderDate));
+
+        //                cmd.Parameters.AddWithValue(
+        //                    "@lastContactDate",
+        //                    string.IsNullOrWhiteSpace(lastContactDate)
+        //                        ? (object)DBNull.Value
+        //                        : DateTime.Parse(lastContactDate));
+
+        //                cmd.Parameters.AddWithValue(
+        //                    "@notes",
+        //                    string.IsNullOrWhiteSpace(notes)
+        //                        ? (object)DBNull.Value
+        //                        : notes.Trim());
+
+        //                cmd.ExecuteNonQuery();
+        //            }
+        //        }
+
+        //        return "Recruiter information saved successfully.";
+        //    }
+        //    catch (FormatException)
+        //    {
+        //        return "One or more dates were entered incorrectly.";
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return "Unable to save recruiter information. Error: " + e.Message;
+        //    }
+        //}
+    }
 }
 
