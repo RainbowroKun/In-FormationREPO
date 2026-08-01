@@ -407,8 +407,31 @@ function UpdateAccountRequest(webMethod, requestId) {
             background-color: #f8fafc;
             border-radius: 7px;
         }
+         .toggleButtons {
+         display: flex;
+         gap: 10px;
+         margin-bottom: 22px;
+        }
 
-    </style>
+     .toggleButton {
+        padding: 10px 18px;
+        border: 1px solid #1f3c88;
+        border-radius: 6px;
+        background-color: white;
+        color: #1f3c88;
+        font-weight: bold;
+        cursor: pointer;
+        }
+
+        .toggleButton:hover {
+            background-color: #eef2f7;
+        }
+
+        .activeToggle {
+            background-color: #1f3c88;
+            color: white;
+        }
+ </style>
 </head>
 
 <body>
@@ -462,7 +485,20 @@ function UpdateAccountRequest(webMethod, requestId) {
         <main class="requestsCard">
 
             <div class="pageHeading">
+                <div class="toggleButtons">
 
+            <button type="button"
+            class="toggleButton activeToggle">
+             Account Requests
+             </button>
+
+         <button type="button"
+            class="toggleButton"
+            onclick="window.location.href='manage-users.html';">
+            User Accounts
+         </button>
+
+         </div>
                 <h2>Pending Account Requests</h2>
 
                 <p>
