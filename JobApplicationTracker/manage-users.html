@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="description"
+          content="View and manage user accounts." />
+
+    <title>User Accounts - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js?v=2"></script>
+    <link rel="stylesheet" href="site.css?v=2" />
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            LoadAccountInformation();
+            CheckAdminAccess();
+        });
+
+        function CheckAdminAccess() {
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetCurrentUserRole",
+                data: "{}",
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    var userInfo = msg.d;
+
+                    if (userInfo == "Not Logged In") {
+
+                        ShowPageMessage(
+                            "You must be logged in."
+                        );
+
+                        $("#usersSection").hide();
+                        return;
+                    }
+
+                    var userParts =
+                        userInfo.split("|");
+
+                    if (userParts.length < 2 ||
+                        userParts[1].trim().toLowerCase() != "admin") {
+
+                        ShowPageMessage(
+                            "Only administrators can view user accounts."
+                        );
+
+                        $("#usersSection").hide();
+                    }
+                },
+
+                error: function () {
+
+                    ShowPageMessage(
+                        "Unable to verify administrator access."
+                    );
+
+                    $("#usersSection").hide();
+                }
+            });
+        }
+
+        function ShowPageMessage(message) {
+
+            $("#pageMessage").text(message);
+        }
+
+    </script>
+
+    <style>
+
+        .usersCard {
+            padding: 32px 38px;
+            background-color: white;
+            border-radius: 9px;
+            box-shadow:
+                0 3px 12px rgba(0, 0, 0, 0.13);
+        }
+
+        .pageHeading {
+            margin-bottom: 26px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #d8dee8;
+        }
+
+        .pageHeading h2 {
+            margin: 0 0 8px 0;
+            color: #0f172a;
+            font-size: 36px;
+        }
+
+        .pageHeading p {
+            margin: 0;
+            color: #64748b;
+        }
+
+        .toggleButtons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .toggleButton {
+            padding: 10px 18px;
+            border: 1px solid #1f3c88;
+            border-radius: 6px;
+            background-color: white;
+            color: #1f3c88;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .toggleButton:hover {
+            background-color: #eef2f7;
+        }
+
+        .activeToggle {
+            background-color: #1f3c88;
+            color: white;
+        }
+
+        .placeholderMessage {
+            padding: 30px;
+            border-radius: 7px;
+            background-color: #f8fafc;
+            color: #64748b;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #pageMessage {
+            color: #dc2626;
+            text-align: center;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <header>
+
+        <div>
+
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <span>User Accounts</span>
+
+        </nav>
+
+        <main class="usersCard">
+
+            <div class="toggleButtons">
+
+                <button type="button"
+                        class="toggleButton"
+                        onclick="window.location.href='account-requests.html';">
+                    Account Requests
+                </button>
+
+                <button type="button"
+                        class="toggleButton activeToggle">
+                    User Accounts
+                </button>
+
+            </div>
+
+            <div class="pageHeading">
+
+                <h2>User Accounts</h2>
+
+                <p>
+                    View and manage registered user accounts.
+                </p>
+
+            </div>
+
+            <p id="pageMessage"></p>
+
+            <section id="usersSection">
+
+                <div class="placeholderMessage">
+                    User account management will be added separately.
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+</body>
+</html>
