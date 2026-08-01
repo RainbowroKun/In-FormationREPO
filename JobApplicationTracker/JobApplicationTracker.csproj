@@ -93,7 +93,7 @@
     <Content Include="add-application.html" />
     <Content Include="Database\applcation_document_recruiters_table_creation.sql" />
     <Content Include="Database\users_and_account_requests_table_creation.sql" />
-    <Content Include="documents.html" />
+    <Content Include="documents-details.html" />
     <Content Include="Global.asax" />
     <Content Include="home-page.html" />
     <Content Include="index.html" />
@@ -103,6 +103,7 @@
     <Content Include="site.css" />
     <Content Include="site.js" />
     <Content Include="view-applications.html" />
+    <Content Include="view-documents.html" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
