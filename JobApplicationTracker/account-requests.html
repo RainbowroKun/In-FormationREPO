@@ -189,10 +189,96 @@
                     $("<td></td>").text(requestedDate)
                 );
 
+                var requestId =
+                request.request_id ||
+                request.RequestId;
+                var actionsCell =
+                $("<td></td>");
+
+                var approveButton =
+              $("<button type='button'>Approve</button>");
+
+                approveButton.addClass("approveButton");
+
+                approveButton.click(function () {
+                ApproveRequest(requestId);
+             });
+
+                var denyButton =
+                $("<button type='button'>Deny</button>");
+
+             denyButton.addClass("denyButton");
+
+                denyButton.click(function () {
+             DenyRequest(requestId);
+             });
+
+                actionsCell.append(approveButton);
+                actionsCell.append(denyButton);
+
+                row.append(actionsCell);
                 tableBody.append(row);
             });
         }
+        function ApproveRequest(requestId) {
 
+    if (!confirm("Approve this account request?")) {
+        return;
+    }
+
+    UpdateAccountRequest(
+        "ProjectServices.asmx/ApproveAccountRequest",
+        requestId
+    );
+}
+
+function DenyRequest(requestId) {
+
+    if (!confirm("Deny this account request?")) {
+        return;
+    }
+
+    UpdateAccountRequest(
+        "ProjectServices.asmx/RejectAccountRequest",
+        requestId
+    );
+}
+
+function UpdateAccountRequest(webMethod, requestId) {
+
+    var parameters = JSON.stringify({
+        requestId: requestId
+    });
+
+    $.ajax({
+        type: "POST",
+        url: webMethod,
+        data: parameters,
+        contentType:
+            "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            ShowRequestMessage(
+                msg.d,
+                "success"
+            );
+
+            LoadAccountRequests();
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            ShowRequestMessage(
+                "Unable to update the account request.",
+                "error"
+            );
+        }
+    });
+}
         function FormatRequestedDate(dateValue) {
 
             if (!dateValue) {
@@ -403,6 +489,7 @@
                                 <th>Username</th>
                                 <th>Status</th>
                                 <th>Requested</th>
+                                <th>Actions</th>
                             </tr>
 
                         </thead>
