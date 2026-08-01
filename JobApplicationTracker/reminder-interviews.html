@@ -2,9 +2,1123 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title></title>
+
+    <meta name="description"
+          content="View follow-up reminders and upcoming interviews." />
+
+    <title>Reminders & Interviews - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+    <script>
+        var allFollowUps = [];
+
+        var allInterviews = [];
+
+
+        $(document).ready(function () {
+
+            LoadAccountInformation();
+
+            $("#followUpTypeFilter").on("change", DisplayFollowUps);
+            $("#followUpStatusFilter").on("change", DisplayFollowUps);
+            $("#followUpSort").on("change", DisplayFollowUps);
+
+            DisplayFollowUps();
+            DisplayInterviews();
+            UpdateReminderSummaryCards();
+        });
+
+
+        /*
+            Updates the four summary cards.
+        */
+
+        function UpdateReminderSummaryCards() {
+
+            var today = GetTodayWithoutTime();
+
+            var weekFromToday = new Date(
+                today.getFullYear(),
+                today.getMonth(),
+                today.getDate() + 7
+            );
+
+            var followUpsToday = 0;
+            var followUpsThisWeek = 0;
+            var overdueFollowUps = 0;
+            var upcomingInterviews = 0;
+
+            allFollowUps.forEach(function (followUp) {
+
+                var followUpDate = GetDateWithoutTime(followUp.FollowUpDate);
+
+                if (!followUpDate) {
+                    return;
+                }
+
+                if (followUpDate.getTime() == today.getTime()) {
+                    followUpsToday++;
+                }
+
+                if (followUpDate >= today && followUpDate <= weekFromToday) {
+                    followUpsThisWeek++;
+                }
+
+                if (followUpDate < today) {
+                    overdueFollowUps++;
+                }
+            });
+
+            allInterviews.forEach(function (interview) {
+
+                var interviewDate = GetDateWithoutTime(interview.InterviewDate);
+
+                if (interviewDate &&
+                    interviewDate >= today &&
+                    interview.InterviewStatus == "Scheduled") {
+                    upcomingInterviews++;
+                }
+            });
+
+            $("#followUpsTodayCount").text(followUpsToday);
+            $("#followUpsWeekCount").text(followUpsThisWeek);
+            $("#overdueFollowUpsCount").text(overdueFollowUps);
+            $("#upcomingInterviewsCount").text(upcomingInterviews);
+        }
+
+
+        /*
+            Displays filtered and sorted follow-up records.
+        */
+
+        function DisplayFollowUps() {
+
+            var selectedType = $("#followUpTypeFilter").val();
+            var selectedStatus = $("#followUpStatusFilter").val();
+            var selectedSort = $("#followUpSort").val();
+
+            var filteredFollowUps = allFollowUps.filter(function (followUp) {
+
+                var matchesType =
+                    selectedType == "All" ||
+                    followUp.FollowUpType == selectedType;
+
+                var currentStatus = GetFollowUpStatus(followUp.FollowUpDate);
+
+                var matchesStatus =
+                    selectedStatus == "All" ||
+                    currentStatus == selectedStatus;
+
+                return (matchesType && matchesStatus);
+            });
+
+            filteredFollowUps.sort(function (firstFollowUp, secondFollowUp) {
+
+                var firstDate = GetDateValue(firstFollowUp.FollowUpDate);
+                var secondDate = GetDateValue(secondFollowUp.FollowUpDate);
+
+                if (selectedSort == "latest") {
+                    return secondDate - firstDate;
+                }
+
+                return firstDate - secondDate;
+            });
+
+            var tableBody = $("#followUpsTableBody");
+
+            tableBody.empty();
+
+            if (filteredFollowUps.length == 0) {
+                tableBody.append(
+                    "<tr>" +
+                    "<td colspan='6' class='emptyTableMessage'>" +
+                    "No follow-ups were found." +
+                    "</td>" +
+                    "</tr>"
+                );
+
+                return;
+            }
+
+            filteredFollowUps.forEach(function (followUp) {
+
+                var followUpStatus = GetFollowUpStatus(followUp.FollowUpDate);
+
+                var row =
+                    "<tr>" +
+                    "<td>" +
+                    FormatDate(followUp.FollowUpDate) +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildFollowUpTypeBadge(followUp.FollowUpType) +
+                    "</td>" +
+
+                    "<td>" +
+                    "<strong>" +
+                    EscapeHtml(followUp.FollowUpName) +
+                    "</strong>" +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildApplicationLink(
+                        followUp.ApplicationId,
+                        followUp.CompanyName,
+                        followUp.ApplicationName
+                    ) +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildFollowUpStatusBadge(followUpStatus) +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildFollowUpActions(followUp) +
+                    "</td>" +
+                    "</tr>";
+
+                tableBody.append(row);
+            });
+        }
+
+
+        /*
+            Displays scheduled interviews.
+        */
+
+        function DisplayInterviews() {
+
+            var interviews = allInterviews.slice();
+
+            interviews.sort(function (firstInterview, secondInterview) {
+                return (
+                    GetDateTimeValue(
+                        firstInterview.InterviewDate,
+                        firstInterview.InterviewTime
+                    ) -
+                    GetDateTimeValue(
+                        secondInterview.InterviewDate,
+                        secondInterview.InterviewTime
+                    )
+                );
+            });
+
+            var tableBody = $("#interviewsTableBody");
+
+            tableBody.empty();
+
+            if (interviews.length == 0) {
+                tableBody.append(
+                    "<tr>" +
+                    "<td colspan='8' class='emptyTableMessage'>" +
+                    "No interviews are scheduled." +
+                    "</td>" +
+                    "</tr>"
+                );
+
+                return;
+            }
+
+            interviews.forEach(function (interview) {
+
+                var row =
+                    "<tr>" +
+                    "<td>" +
+                    "<strong>" +
+                    FormatDate(interview.InterviewDate) +
+                    "</strong>" +
+
+                    "<span class='secondaryTableText'>" +
+                    FormatTime(interview.InterviewTime) +
+                    "</span>" +
+                    "</td>" +
+
+                    "<td>" +
+                    "<strong>" +
+                    EscapeHtml(interview.InterviewTitle) +
+                    "</strong>" +
+
+                    "<span class='secondaryTableText'>" +
+                    interview.DurationMinutes +
+                    " minutes" +
+                    "</span>" +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildApplicationLink(
+                        interview.ApplicationId,
+                        interview.CompanyName,
+                        interview.ApplicationName
+                    ) +
+                    "</td>" +
+
+                    "<td>" +
+                    EscapeHtml(interview.InterviewerName || "—") +
+
+                    "<span class='secondaryTableText'>" +
+                    EscapeHtml(interview.InterviewerRole || "") +
+                    "</span>" +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildInterviewTypeBadge(interview.InterviewType) +
+                    "</td>" +
+
+                    "<td class='locationCell'>" +
+                    EscapeHtml(interview.LocationOrLink || "—") +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildInterviewStatusBadge(interview.InterviewStatus) +
+                    "</td>" +
+
+                    "<td>" +
+                    BuildInterviewActions(interview.InterviewId) +
+                    "</td>" +
+                    "</tr>";
+
+                tableBody.append(row);
+            });
+        }
+
+
+        /*
+            Follow-up and interview display helpers.
+        */
+
+        function GetFollowUpStatus(followUpDateValue) {
+
+            var followUpDate = GetDateWithoutTime(followUpDateValue);
+            var today = GetTodayWithoutTime();
+
+            if (!followUpDate) {
+                return "Upcoming";
+            }
+
+            if (followUpDate < today) {
+                return "Overdue";
+            }
+
+            if (followUpDate.getTime() == today.getTime()) {
+                return "Due Today";
+            }
+
+            return "Upcoming";
+        }
+
+
+        function BuildFollowUpTypeBadge(followUpType) {
+
+            var typeClass =
+                followUpType == "Recruiter"
+                    ? "followUpRecruiter"
+                    : "followUpApplication";
+
+            return (
+                "<span class='followUpTypeBadge " + typeClass + "'>" +
+                EscapeHtml(followUpType) +
+                "</span>"
+            );
+        }
+
+
+        function BuildFollowUpStatusBadge(status) {
+
+            var statusClass = "followUpUpcoming";
+
+            if (status == "Overdue") {
+                statusClass = "followUpOverdue";
+            }
+            else if (status == "Due Today") {
+                statusClass = "followUpToday";
+            }
+
+            return (
+                "<span class='followUpStatusBadge " + statusClass + "'>" +
+                EscapeHtml(status) +
+                "</span>"
+            );
+        }
+
+
+        function BuildInterviewTypeBadge(interviewType) {
+
+            var typeClass = "interviewPhone";
+
+            if (interviewType == "Video") {
+                typeClass = "interviewVideo";
+            }
+            else if (interviewType == "Onsite") {
+                typeClass = "interviewOnsite";
+            }
+
+            return (
+                "<span class='interviewTypeBadge " + typeClass + "'>" +
+                EscapeHtml(interviewType) +
+                "</span>"
+            );
+        }
+
+
+        function BuildInterviewStatusBadge(status) {
+
+            return (
+                "<span class='interviewStatusBadge'>" +
+                EscapeHtml(status || "Scheduled") +
+                "</span>"
+            );
+        }
+
+
+        function BuildApplicationLink(applicationId, companyName, applicationName) {
+
+            if (!applicationId) {
+                return "—";
+            }
+
+            return (
+                "<a class='tableLink' href='application-details.html?applicationId=" +
+                applicationId +
+                "'>" +
+                EscapeHtml(companyName || "Application") +
+                "</a>" +
+
+                "<span class='secondaryTableText'>" +
+                EscapeHtml(applicationName || "") +
+                "</span>"
+            );
+        }
+
+
+        function BuildFollowUpActions(followUp) {
+
+            var viewPage =
+                followUp.FollowUpType == "Recruiter"
+                    ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId
+                    : "application-details.html?applicationId=" + followUp.RelatedId;
+
+            var editPage =
+                followUp.FollowUpType == "Recruiter"
+                    ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId
+                    : "edit-application.html?applicationId=" + followUp.RelatedId;
+
+            return (
+                "<div class='rowActions'>" +
+                "<a class='tableLink' href='" + viewPage + "'>" +
+                "View" +
+                "</a>" +
+
+                "<a class='tableLink' href='" + editPage + "'>" +
+                "Edit" +
+                "</a>" +
+                "</div>"
+            );
+        }
+
+
+        function BuildInterviewActions(interviewId) {
+
+            return (
+                "<div class='rowActions'>" +
+                "<a class='tableLink' href='edit-interview.html?interviewId=" +
+                interviewId +
+                "'>" +
+                "Edit" +
+                "</a>" +
+
+                "<button type='button' class='deleteTextButton' onclick='DeleteInterview(" +
+                interviewId +
+                ");'>" +
+                "Delete" +
+                "</button>" +
+                "</div>"
+            );
+        }
+
+
+        /*
+            Placeholder interview deletion.
+        */
+
+        function DeleteInterview(interviewId) {
+
+            var confirmed = confirm("Delete this interview?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            allInterviews = allInterviews.filter(function (interview) {
+                return interview.InterviewId != interviewId;
+            });
+
+            DisplayInterviews();
+            UpdateReminderSummaryCards();
+
+            ShowPageMessage(
+                "Interview removed from the placeholder list.",
+                "success"
+            );
+        }
+
+
+        /*
+            Date helpers.
+        */
+
+        function GetTodayWithoutTime() {
+
+            var today = new Date();
+
+            return new Date(
+                today.getFullYear(),
+                today.getMonth(),
+                today.getDate()
+            );
+        }
+
+
+        function GetDateWithoutTime(value) {
+
+            if (!value) {
+                return null;
+            }
+
+            var date = new Date(value + "T00:00:00");
+
+            if (isNaN(date.getTime())) {
+                return null;
+            }
+
+            return date;
+        }
+
+
+        function GetDateValue(value) {
+
+            var date = GetDateWithoutTime(value);
+
+            return date
+                ? date.getTime()
+                : 0;
+        }
+
+
+        function GetDateTimeValue(dateValue, timeValue) {
+
+            if (!dateValue) {
+                return 0;
+            }
+
+            var dateTime = new Date(
+                dateValue +
+                "T" +
+                (timeValue || "00:00") +
+                ":00"
+            );
+
+            if (isNaN(dateTime.getTime())) {
+                return 0;
+            }
+
+            return dateTime.getTime();
+        }
+
+
+        function FormatTime(value) {
+
+            if (!value) {
+                return "—";
+            }
+
+            var pieces = value.split(":");
+            var date = new Date();
+
+            date.setHours(
+                Number(pieces[0]),
+                Number(pieces[1]),
+                0,
+                0
+            );
+
+            return date.toLocaleTimeString(
+                [],
+                {
+                    hour: "numeric",
+                    minute: "2-digit"
+                }
+            );
+        }
+
+    </script>
+
+    <style>
+
+        /*
+            Reminders and Interviews page heading.
+
+            Shared page width and breadcrumbs come from site.css.
+        */
+
+        .pageHeadingRow {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 22px;
+        }
+
+        .pageHeading h2 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 36px;
+        }
+
+        .pageHeading p {
+            margin: 0;
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .headingActions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+            .headingActions a {
+                text-decoration: none;
+            }
+
+
+        /*
+            Summary cards.
+        */
+
+        .reminderSummaryGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .reminderSummaryCard {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-height: 112px;
+            padding: 22px;
+            border: 1px solid;
+            border-radius: 9px;
+            background-color: white;
+        }
+
+        .summaryIcon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 54px;
+            height: 54px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            font-size: 23px;
+            font-weight: bold;
+        }
+
+        .summaryText h3 {
+            margin: 0 0 8px;
+            font-size: 15px;
+        }
+
+        .summaryText p {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .todaySummary {
+            border-color: #bfdbfe;
+            color: #1556d8;
+        }
+
+            .todaySummary .summaryIcon {
+                background-color: #dbeafe;
+            }
+
+        .weekSummary {
+            border-color: #fed7aa;
+            color: #d97706;
+        }
+
+            .weekSummary .summaryIcon {
+                background-color: #ffedd5;
+            }
+
+        .overdueSummary {
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+
+            .overdueSummary .summaryIcon {
+                background-color: #fee2e2;
+            }
+
+        .interviewSummary {
+            border-color: #ddd6fe;
+            color: #7c3aed;
+        }
+
+            .interviewSummary .summaryIcon {
+                background-color: #ede9fe;
+            }
+
+
+        /*
+            Follow-up and interview cards.
+        */
+
+        .scheduleCard {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            background-color: white;
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
+        }
+
+        .cardHeadingRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 14px;
+        }
+
+            .cardHeadingRow h3 {
+                margin: 0;
+                color: #0f172a;
+                font-size: 20px;
+            }
+
+        .followUpFilters {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .followUpFilters select {
+                min-width: 150px;
+            }
+
+
+        /*
+            Tables.
+        */
+
+        .tableWrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .scheduleTable {
+            width: 100%;
+            min-width: 1050px;
+            border-collapse: collapse;
+        }
+
+            .scheduleTable th,
+            .scheduleTable td {
+                padding: 13px 12px;
+                border-bottom: 1px solid #e2e8f0;
+                text-align: left;
+                vertical-align: middle;
+            }
+
+            .scheduleTable th {
+                background-color: #f8fafc;
+                color: #475569;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+
+            .scheduleTable td {
+                color: #334155;
+                font-size: 13px;
+            }
+
+            .scheduleTable tbody tr:hover {
+                background-color: #f8fafc;
+            }
+
+        .secondaryTableText {
+            display: block;
+            margin-top: 3px;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .locationCell {
+            max-width: 220px;
+        }
+
+        .emptyTableMessage {
+            padding: 34px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .tableLink {
+            color: #1556d8;
+            text-decoration: none;
+        }
+
+            .tableLink:hover {
+                text-decoration: underline;
+            }
+
+
+        /*
+            Follow-up and interview badges.
+        */
+
+        .followUpTypeBadge,
+        .followUpStatusBadge,
+        .interviewTypeBadge,
+        .interviewStatusBadge {
+            display: inline-block;
+            min-width: 78px;
+            padding: 5px 9px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .followUpApplication {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .followUpRecruiter {
+            background-color: #ffedd5;
+            color: #c2410c;
+        }
+
+        .followUpUpcoming {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .followUpToday {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        .followUpOverdue {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .interviewPhone {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .interviewVideo {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .interviewOnsite {
+            background-color: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .interviewStatusBadge {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+
+        /*
+            Table actions and footer.
+        */
+
+        .rowActions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+        }
+
+        .deleteTextButton {
+            padding: 0;
+            border: none;
+            background: none;
+            color: #dc2626;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+            .deleteTextButton:hover {
+                text-decoration: underline;
+            }
+
+        .timeZoneNotice {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
 </head>
+
 <body>
+
+    <header>
+
+        <div>
+
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <span>
+                Reminders &amp; Interviews
+            </span>
+
+        </nav>
+
+        <div class="pageHeadingRow">
+
+            <div class="pageHeading">
+
+                <h2>
+                    Reminders &amp; Interviews
+                </h2>
+
+                <p>
+                    Manage application and recruiter follow-ups
+                    and track your upcoming interviews.
+                </p>
+
+            </div>
+
+            <div class="headingActions">
+
+                <a class="secondaryButton"
+                   href="add-follow-up.html">
+                    + Add Follow-Up
+                </a>
+
+                <a class="primaryButton"
+                   href="add-interview.html">
+                    + Add Interview
+                </a>
+
+            </div>
+
+        </div>
+
+        <section class="reminderSummaryGrid">
+
+            <div class="reminderSummaryCard todaySummary">
+
+                <div class="summaryIcon">✓</div>
+
+                <div class="summaryText">
+
+                    <h3>Follow-Ups Today</h3>
+
+                    <p id="followUpsTodayCount">0</p>
+
+                </div>
+
+            </div>
+
+            <div class="reminderSummaryCard weekSummary">
+
+                <div class="summaryIcon">7</div>
+
+                <div class="summaryText">
+
+                    <h3>Follow-Ups This Week</h3>
+
+                    <p id="followUpsWeekCount">0</p>
+
+                </div>
+
+            </div>
+
+            <div class="reminderSummaryCard overdueSummary">
+
+                <div class="summaryIcon">!</div>
+
+                <div class="summaryText">
+
+                    <h3>Overdue Follow-Ups</h3>
+
+                    <p id="overdueFollowUpsCount">0</p>
+
+                </div>
+
+            </div>
+
+            <div class="reminderSummaryCard interviewSummary">
+
+                <div class="summaryIcon">i</div>
+
+                <div class="summaryText">
+
+                    <h3>Upcoming Interviews</h3>
+
+                    <p id="upcomingInterviewsCount">0</p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="scheduleCard">
+
+            <div class="cardHeadingRow">
+
+                <h3>Follow-Up Reminders</h3>
+
+                <div class="followUpFilters">
+
+                    <select id="followUpTypeFilter"
+                            aria-label="Filter follow-ups by type">
+
+                        <option value="All">All Types</option>
+                        <option value="Application">Applications</option>
+                        <option value="Recruiter">Recruiters</option>
+
+                    </select>
+
+                    <select id="followUpStatusFilter"
+                            aria-label="Filter follow-ups by status">
+
+                        <option value="All">All Statuses</option>
+                        <option value="Overdue">Overdue</option>
+                        <option value="Due Today">Due Today</option>
+                        <option value="Upcoming">Upcoming</option>
+
+                    </select>
+
+                    <select id="followUpSort"
+                            aria-label="Sort follow-ups">
+
+                        <option value="soonest">Due: Soonest</option>
+                        <option value="latest">Due: Latest</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="tableWrapper">
+
+                <table class="scheduleTable">
+
+                    <thead>
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Type</th>
+                            <th>Follow-Up For</th>
+                            <th>Related Application</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="followUpsTableBody"></tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+        <section class="scheduleCard">
+
+            <div class="cardHeadingRow">
+                <h3>Upcoming Interviews</h3>
+            </div>
+
+            <div class="tableWrapper">
+
+                <table class="scheduleTable">
+
+                    <thead>
+                        <tr>
+                            <th>Date / Time</th>
+                            <th>Interview</th>
+                            <th>Related Application</th>
+                            <th>Interviewer</th>
+                            <th>Type</th>
+                            <th>Location / Link</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="interviewsTableBody"></tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+        <p id="pageMessage"></p>
+
+        <p class="timeZoneNotice">
+            All times are displayed in your local time zone.
+        </p>
+
+    </div>
 
 </body>
 </html>

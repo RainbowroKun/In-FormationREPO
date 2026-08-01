@@ -34,6 +34,11 @@
                 "change",
                 FilterApplications
             );
+
+            $("#clearApplicationFilters").on(
+                "click",
+                ClearApplicationFilters
+            );
         });
 
 
@@ -69,24 +74,15 @@
 
         function FilterApplications() {
 
-            var searchText =
-                $("#applicationSearch").val().trim().toLowerCase();
+            var searchText = $("#applicationSearch").val().trim().toLowerCase();
 
-            var selectedStatus =
-                $("#statusFilter").val();
+            var selectedStatus = $("#statusFilter").val();
 
-            filteredApplications =
-                allApplications.filter(function (application) {
+            filteredApplications = allApplications.filter(function (application) {
 
-                    var isArchived =
-                        application.IsArchived == true;
+                    var isArchived = application.IsArchived == true;
 
-                    var matchesStatus =
-                        DoesApplicationMatchStatus(
-                            application,
-                            selectedStatus,
-                            isArchived
-                        );
+                    var matchesStatus = DoesApplicationMatchStatus(application, selectedStatus, isArchived);
 
                     var searchableText =
                         (
@@ -95,20 +91,16 @@
                             application.Location
                         ).toLowerCase();
 
-                    var matchesSearch =
-                        searchableText.includes(searchText);
+                    var matchesSearch = searchableText.includes(searchText);
 
-                    return matchesStatus && matchesSearch;
+                    return (matchesStatus && matchesSearch);
                 });
 
             SortApplications();
             DisplayApplications();
         }
 
-        function DoesApplicationMatchStatus(
-            application,
-            selectedStatus,
-            isArchived) {
+        function DoesApplicationMatchStatus(application, selectedStatus, isArchived) {
 
             if (selectedStatus == "All") {
                 return true;
@@ -123,48 +115,35 @@
             }
 
             return (
-                application.ApplicationStatus ==
-                selectedStatus
+                application.ApplicationStatus == selectedStatus
             );
         }
 
         function SortApplications() {
 
-            var selectedSort =
-                $("#applicationSort").val();
+            var selectedSort = $("#applicationSort").val();
 
-            filteredApplications.sort(
-                function (firstApplication, secondApplication) {
+            filteredApplications.sort(function (firstApplication, secondApplication) {
 
                     if (selectedSort == "dateNewest") {
 
                         return(
-                            GetDateValue(
-                                secondApplication.DateApplied
-                            ) -
-                            GetDateValue(
-                                firstApplication.DateApplied
-                            )
+                            GetDateValue(secondApplication.DateApplied) -
+                            GetDateValue(firstApplication.DateApplied)
                         );
                     }
 
                     if (selectedSort == "dateOldest") {
 
                         return (
-                            GetDateValue(
-                                firstApplication.DateApplied
-                            ) -
-                            GetDateValue(
-                                secondApplication.DateApplied
-                            )
+                            GetDateValue(firstApplication.DateApplied) -
+                            GetDateValue(secondApplication.DateApplied)
                         );
                     }
 
-                    var firstCompany =
-                        firstApplication.CompanyName || "";
+                    var firstCompany = firstApplication.CompanyName || "";
 
-                    var secondCompany =
-                        secondApplication.CompanyName || "";
+                    var secondCompany = secondApplication.CompanyName || "";
 
                     if (selectedSort ==
                         "companyAscending") {
@@ -172,9 +151,7 @@
                         return firstCompany.localeCompare(secondCompany);
                     }
 
-                    return secondCompany.localeCompare(
-                        firstCompany
-                    );
+                    return secondCompany.localeCompare(firstCompany);
                 }
             );
         }
@@ -185,8 +162,7 @@
                 return 0;
             }
 
-            var date =
-                new Date(value);
+            var date = new Date(value);
 
             if (isNaN(date.getTime())) {
                 return 0;
@@ -197,8 +173,7 @@
 
         function DisplayApplications() {
 
-            var tableBody =
-                $("#applicationsTableBody");
+            var tableBody = $("#applicationsTableBody");
 
             tableBody.empty();
 
@@ -222,11 +197,9 @@
             filteredApplications.forEach(
                 function (application) {
 
-                    var statusText =
-                        GetStatusText(application);
+                    var statusText = GetStatusText(application);
 
-                    var statusClass =
-                        GetStatusClass(application);
+                    var statusClass = GetStatusClass(application);
 
                     var row =
                         "<tr>" +
@@ -247,9 +220,9 @@
                             "</td>" +
 
                             "<td>" +
-                            "<span class='statusBadge " + statusClass + "'>" +
-                                EscapeHtml(application.ApplicationStatus) +
-                            "</span>" +
+                                "<span class='statusBadge " + statusClass + "'>" +
+                                    EscapeHtml(statusText) +
+                                "</span>" +
                             "</td>" +
 
                             "<td>" +
@@ -261,7 +234,7 @@
                             "</td>" +
 
                             "<td>" +
-                                BuildApplicationActions(application.ApplicationId) +
+                                BuildApplicationActions(application.ApplicationId, application.isArchived) +
                             "</td>" +
 
                         "</tr>";
@@ -273,7 +246,7 @@
             $("#applicationCountMessage").text(
                 "Showing " +
                 filteredApplications.length +
-                " application."
+                " application." +
 
                 (
                     filteredApplications.length == 1
@@ -289,8 +262,7 @@
                 return "Archived";
             }
 
-            return (
-                application.ApplicationStatus ||
+            return (application.ApplicationStatus ||
                 "Applied"
             );
         }
@@ -301,33 +273,23 @@
                 return "statusArchived";
             }
 
-            if (
-                application.ApplicationStatus ==
-                "Interview"
-            ) {
+            if (application.ApplicationStatus == "Interview") {
                 return "statusInterview";
             }
 
-            if (
-                application.ApplicationStatus ==
-                "Offer"
-            ) {
+            if (application.ApplicationStatus == "Offer") {
                 return "statusOffer";
             }
 
             if (
-                application.ApplicationStatus ==
-                "Rejected"
-            ) {
+                application.ApplicationStatus == "Rejected") {
                 return "statusRejected";
+            }
+                return "statusApplied";
         }
 
-        function BuildApplicationActions(application) {
-            var applicationId =
-                application.ApplicationId;
-
-            var archiveText =
-                application.IsArchived == true
+        function BuildApplicationActions(applicationId, isArchived) {
+            var archiveText = isArchived == true
                     ? "Unarchive"
                     : "Archive";
 
@@ -338,21 +300,13 @@
                         "Details" +
                     "</a>" +
 
-                    "<a class='actionLink' href='application-documents.html?applicationId=" + applicationId + "'>" +
-                        "Documents" +
-                    "</a>" +
-
-                    "<a class='actionLink' href='application-recruiters.html?applicationId=" + applicationId + "'>" +
-                        "Recruiter" +
-                    "</a>" +
-
                     "<a class='actionLink' href='edit-application.html?applicationId=" + applicationId + "'>" +
                         "Edit" +
                     "</a>" +
 
                     "<div class='moreMenuWrapper'>" +
 
-                        "<button type='button' class='moreButton' aria-label='More application actions' onclick='ToggleMoreMenu(" + applicationId + ");'>" +
+                        "<button type='button' class='moreButton' onclick='ToggleMoreMenu(" + applicationId + ");'>" +
                             "&hellip;" +
                         "</button>" +
 
@@ -393,8 +347,7 @@
             var rejectedCount = 0;
             var archivedCount = 0;
 
-            allApplications.forEach(
-                function (application) {
+            allApplications.forEach(function (application) {
 
                     if (application.IsArchived == true) {
                         archivedCount++;
@@ -417,31 +370,23 @@
                 }
             );
 
-            $("#activeApplicationCount")
-                .text(activeCount);
+            $("#activeApplicationCount").text(activeCount);
 
-            $("#interviewCount")
-                .text(interviewCount);
+            $("#interviewCount").text(interviewCount);
 
-            $("#offerCount")
-                .text(offerCount);
+            $("#offerCount").text(offerCount);
 
-            $("#rejectedCount")
-                .text(rejectedCount);
+            $("#rejectedCount").text(rejectedCount);
 
-            $("#archivedCount")
-                .text(archivedCount);
+            $("#archivedCount").text(archivedCount);
         }
 
-        function ToggleArchiveApplication(
-        applicationId) {
+        function ToggleArchiveApplication(applicationId) {
 
         $(".moreMenu").hide();
 
         alert(
-            "Archive and unarchive will be " +
-            "connected when we add the " +
-            "ProjectServices methods. " +
+            "Archive and unarchive will be connected when we add the ProjectServices methods. " +
             "Application ID: " +
             applicationId
         );
@@ -450,12 +395,21 @@
         function DeleteApplication(applicationId) {
             $(".moreMenu").hide();
 
-            alert(
-                "Delete will be connected when " +
-                "we add the ProjectServices method. " +
+            alert("Delete will be connected when we add the ProjectServices method. " +
                 "Application ID: " +
                 applicationId
             );
+        }
+
+        function ClearApplicationFilters() {
+
+            $("#applicationSearch").val("");
+
+            $("#statusFilter").val("All");
+
+            $("#applicationSort").val("dateNewest");
+
+            FilterApplications();
         }
 
         $(document).click(
@@ -475,6 +429,13 @@
 
 
     <style>
+        /*
+            View Applications page heading.
+
+            General page width and breadcrumbs come
+            from site.css.
+        */
+
         .pageHeadingRow {
             display: flex;
             align-items: flex-start;
@@ -495,27 +456,15 @@
             font-size: 17px;
         }
 
-
-        /* Add Application button */
-
         .addApplicationButton {
             flex-shrink: 0;
-            padding: 13px 23px;
-            border: 1px solid #1556d8;
-            border-radius: 6px;
-            background-color: #1556d8;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
             text-decoration: none;
         }
 
-            .addApplicationButton:hover {
-                background-color: #1045b1;
-            }
 
-
-        /* Summary cards */
+        /*
+            Application summary cards.
+        */
 
         .summaryGrid {
             display: grid;
@@ -574,77 +523,88 @@
         }
 
 
-        /* Applications table card */
+        /*
+            Applications table card.
+        */
 
         .applicationsCard {
             padding: 22px;
+            border: 1px solid #e2e8f0;
             border-radius: 9px;
             background-color: white;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
         }
 
 
-        /* Search, sort, and filter controls */
+        /*
+            Application search, filter, and sorting controls.
+
+            Inputs, selects, and buttons use shared styling
+            from site.css.
+        */
 
         .tableControls {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: 1.3fr 1fr 1fr auto;
             gap: 16px;
+            align-items: end;
             margin-bottom: 20px;
         }
 
-            .tableControls input,
-            .tableControls select {
-                min-width: 240px;
-                padding: 11px 13px;
-                border: 1px solid #cbd5e1;
-                border-radius: 5px;
-                background-color: white;
-                color: #334155;
-                font-family: inherit;
-                font-size: 15px;
+            .tableControls .formField {
+                margin-bottom: 0;
             }
 
-                .tableControls input:focus,
-                .tableControls select:focus {
-                    border-color: #2563eb;
-                    outline: 2px solid rgba(37, 99, 235, 0.15);
-                }
+        .clearFiltersArea {
+            display: flex;
+            align-items: flex-end;
+            height: 100%;
+        }
+
+            .clearFiltersArea .secondaryButton {
+                min-height: 43px;
+                white-space: nowrap;
+            }
 
 
-        /* Table */
+        /*
+            Applications table.
+        */
 
         .tableWrapper {
+            width: 100%;
             overflow-x: auto;
         }
 
-        .applicationsCard table {
+        .applicationsTable {
             width: 100%;
+            min-width: 1120px;
             border-collapse: collapse;
         }
 
-        .applicationsCard th,
-        .applicationsCard td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            text-align: left;
-            white-space: nowrap;
-        }
+            .applicationsTable th,
+            .applicationsTable td {
+                padding: 14px 12px;
+                border-bottom: 1px solid #e2e8f0;
+                text-align: left;
+                vertical-align: middle;
+                white-space: nowrap;
+            }
 
-        .applicationsCard th {
-            background-color: #f8fafc;
-            color: #475569;
-            font-size: 13px;
-        }
+            .applicationsTable th {
+                background-color: #f8fafc;
+                color: #475569;
+                font-size: 13px;
+            }
 
-        .applicationsCard td {
-            color: #334155;
-            font-size: 14px;
-        }
+            .applicationsTable td {
+                color: #334155;
+                font-size: 14px;
+            }
 
-        .applicationsCard tbody tr:hover {
-            background-color: #f8fafc;
-        }
+            .applicationsTable tbody tr:hover {
+                background-color: #f8fafc;
+            }
 
         .companyName {
             color: #0f172a;
@@ -658,7 +618,9 @@
         }
 
 
-        /* Status badges */
+        /*
+            Application status badges.
+        */
 
         .statusBadge {
             display: inline-block;
@@ -696,7 +658,9 @@
         }
 
 
-        /* Row actions */
+        /*
+            Application row actions.
+        */
 
         .actionArea {
             display: flex;
@@ -705,12 +669,9 @@
         }
 
         .actionLink {
-            border: none;
-            background: none;
             color: #1556d8;
             font-size: 14px;
             text-decoration: none;
-            cursor: pointer;
         }
 
             .actionLink:hover {
@@ -718,7 +679,9 @@
             }
 
 
-        /* Three-dot menu */
+        /*
+            Three-dot actions menu.
+        */
 
         .moreMenuWrapper {
             position: relative;
@@ -762,6 +725,7 @@
                 background-color: white;
                 color: #334155;
                 text-align: left;
+                font-family: inherit;
                 cursor: pointer;
             }
 
@@ -774,13 +738,11 @@
             }
 
 
-        /* Table footer */
+        /*
+            Application table footer.
+        */
 
         .tableFooter {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
             padding-top: 20px;
             color: #64748b;
             font-size: 14px;
@@ -827,7 +789,6 @@
             <span>&gt;</span>
             <span>View Applications</span>
         </nav>
-
         <div class="pageHeadingRow">
 
             <div class="pageHeading">
@@ -838,10 +799,10 @@
                 </p>
             </div>
 
-            <a class="addApplicationButton"
-               href="add-application.html">
-                Add Application
-            </a>
+                <a class="primaryButton addApplicationButton"
+                   href="add-application.html">
+                    Add Application
+                </a>
 
         </div>
 
@@ -878,50 +839,98 @@
 
             <div class="tableControls">
 
-                <input type="search"
-                       id="applicationSearch"
-                       placeholder="Search applications..."/>
+                <div class="formField">
 
-                <select id="applicationSort">
+                    <label for="applicationSearch">
+                        Search Applications
+                    </label>
 
-                    <option value="dateNewest">
-                        Sort by: Date Applied (Newest)
-                    </option>
+                    <input type="search" id="applicationSearch" placeholder="Search company, job title, or location..." />
 
-                    <option value="dateOldest">
-                        Sort by: Date Applied (Oldest)
-                    </option>
+                </div>
 
-                    <option value="companyAscending">
-                        Sort by: Company (A-Z)
-                    </option>
+                <div class="formField">
 
-                    <option value="companyDescending">
-                        Sort by: Company (Z-A)
-                    </option>
+                    <label for="statusFilter">
+                        Status
+                    </label>
 
-                </select>
+                    <select id="statusFilter">
 
-                <select id="statusFilter">
+                        <option value="All">
+                            All Statuses
+                        </option>
 
-                    <option value="All">
-                        Filter: All Statuses
-                    </option>
+                        <option value="Applied">
+                            Applied
+                        </option>
 
-                    <option value="Applied">Applied</option>
-                    <option value="Interview">Interview</option>
-                    <option value="Offer">Offer</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="Archived">Archived</option>
+                        <option value="Interview">
+                            Interview
+                        </option>
 
-                </select>
+                        <option value="Offer">
+                            Offer
+                        </option>
+
+                        <option value="Rejected">
+                            Rejected
+                        </option>
+
+                        <option value="Archived">
+                            Archived
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="formField">
+
+                    <label for="applicationSort">
+                        Sort By
+                    </label>
+
+                    <select id="applicationSort">
+
+                        <option value="dateNewest">
+                            Date Applied (Newest)
+                        </option>
+
+                        <option value="dateOldest">
+                            Date Applied (Oldest)
+                        </option>
+
+                        <option value="companyAscending">
+                            Company (A-Z)
+                        </option>
+
+                        <option value="companyDescending">
+                            Company (Z-A)
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="clearFiltersArea">
+
+                    <button type="button"
+                            id="clearApplicationFilters"
+                            class="secondaryButton">
+                        Clear Filters
+                    </button>
+
+                </div>
 
             </div>
 
             <div class="tableWrapper">
 
-                <table>
+                <table class="applicationsTable">
+
                     <thead>
+
                         <tr>
                             <th>Company</th>
                             <th>Job Title</th>
@@ -932,10 +941,22 @@
                             <th>Last Updated</th>
                             <th>Actions</th>
                         </tr>
+
                     </thead>
 
                     <tbody id="applicationsTableBody">
+
+                        <tr>
+
+                            <td colspan="8"
+                                class="emptyTableMessage">
+                                Loading applications...
+                            </td>
+
+                        </tr>
+
                     </tbody>
+
                 </table>
 
             </div>
@@ -943,463 +964,15 @@
             <p id="pageMessage"></p>
 
             <div class="tableFooter">
+
                 <span id="applicationCountMessage">
                     Showing 0 applications.
                 </span>
+
             </div>
 
         </main>
 
     </div>
-
-    <script>
-        var allApplications = [];
-        var filteredApplications = [];
-
-        $(document).ready(function () {
-            LoadAccountInformation();
-            LoadApplications();
-        });
-
-
-        function LoadApplications() {
-
-            $.ajax({
-                type: "POST",
-                url: "ProjectServices.asmx/GetApplications",
-                data: "{}",
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-
-                success: function (msg) {
-
-                    allApplications = msg.d || [];
-
-                    UpdateSummaryCards();
-                    FilterApplications();
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr.responseText);
-
-                    ShowPageError(
-                        "Unable to load your applications."
-                    );
-                }
-            });
-        }
-
-
-        function FilterApplications() {
-
-            var searchText =
-                $("#applicationSearch").val().trim().toLowerCase();
-
-            var selectedStatus =
-                $("#statusFilter").val();
-
-            filteredApplications =
-                allApplications.filter(function (application) {
-
-                    var matchesStatus =
-                        selectedStatus == "All" ||
-                        application.ApplicationStatus ==
-                        selectedStatus;
-
-                    var searchableText =
-                        (
-                            application.CompanyName + " " +
-                            application.JobTitle + " " +
-                            application.Location
-                        ).toLowerCase();
-
-                    var matchesSearch =
-                        searchableText.includes(searchText);
-
-                    return matchesStatus && matchesSearch;
-                });
-
-            SortApplications();
-            DisplayApplications();
-        }
-
-
-        function SortApplications() {
-
-            var selectedSort =
-                $("#applicationSort").val();
-
-            filteredApplications.sort(
-                function (firstApplication, secondApplication) {
-
-                    if (selectedSort == "dateNewest") {
-
-                        return new Date(
-                            secondApplication.DateApplied
-                        ) -
-                            new Date(
-                                firstApplication.DateApplied
-                            );
-                    }
-
-                    if (selectedSort == "dateOldest") {
-
-                        return new Date(
-                            firstApplication.DateApplied
-                        ) -
-                            new Date(
-                                secondApplication.DateApplied
-                            );
-                    }
-
-                    if (selectedSort ==
-                        "companyAscending") {
-
-                        return firstApplication.CompanyName
-                            .localeCompare(
-                                secondApplication.CompanyName
-                            );
-                    }
-
-                    return secondApplication.CompanyName
-                        .localeCompare(
-                            firstApplication.CompanyName
-                        );
-                }
-            );
-        }
-
-
-        function DisplayApplications() {
-
-            var tableBody =
-                $("#applicationsTableBody");
-
-            tableBody.empty();
-
-            if (filteredApplications.length == 0) {
-
-                tableBody.append(
-                    "<tr>" +
-                    "<td colspan='8'>" +
-                    "No applications were found." +
-                    "</td>" +
-                    "</tr>"
-                );
-
-                $("#applicationCountMessage")
-                    .text("Showing 0 applications.");
-
-                return;
-            }
-
-            filteredApplications.forEach(
-                function (application) {
-
-                    var statusClass =
-                        GetStatusClass(
-                            application.ApplicationStatus
-                        );
-
-                    var row =
-                        "<tr>" +
-
-                        "<td class='companyName'>" +
-                        EscapeHtml(
-                            application.CompanyName
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        EscapeHtml(
-                            application.JobTitle
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        EscapeHtml(
-                            application.Location || ""
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.DateApplied
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        "<span class='statusBadge " +
-                        statusClass +
-                        "'>" +
-                        EscapeHtml(
-                            application.ApplicationStatus
-                        ) +
-                        "</span>" +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.FollowUpDate
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        FormatDate(
-                            application.UpdatedAt
-                        ) +
-                        "</td>" +
-
-                        "<td>" +
-                        BuildApplicationActions(
-                            application.ApplicationId
-                        ) +
-                        "</td>" +
-
-                        "</tr>";
-
-                    tableBody.append(row);
-                }
-            );
-
-            $("#applicationCountMessage").text(
-                "Showing " +
-                filteredApplications.length +
-                " applications."
-            );
-        }
-
-
-        function BuildApplicationActions(applicationId) {
-
-            return (
-                "<div class='actionArea'>" +
-
-                "<a class='actionLink' " +
-                "href='application-details.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Details" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='application-documents.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Documents" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='application-recruiters.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Recruiter" +
-                "</a>" +
-
-                "<a class='actionLink' " +
-                "href='edit-application.html" +
-                "?applicationId=" +
-                applicationId +
-                "'>" +
-                "Edit" +
-                "</a>" +
-
-                "<div class='moreMenuWrapper'>" +
-
-                "<button type='button' " +
-                "class='moreButton' " +
-                "onclick='ToggleMoreMenu(" +
-                applicationId +
-                ");'>" +
-                "&hellip;" +
-                "</button>" +
-
-                "<div class='moreMenu' " +
-                "id='moreMenu" +
-                applicationId +
-                "'>" +
-
-                "<button type='button' " +
-                "onclick='ArchiveApplication(" +
-                applicationId +
-                ");'>" +
-                "Archive" +
-                "</button>" +
-
-                "<button type='button' " +
-                "class='deleteAction' " +
-                "onclick='DeleteApplication(" +
-                applicationId +
-                ");'>" +
-                "Delete" +
-                "</button>" +
-
-                "</div>" +
-
-                "</div>" +
-
-                "</div>"
-            );
-        }
-
-
-        function ToggleMoreMenu(applicationId) {
-
-            $(".moreMenu").not(
-                "#moreMenu" + applicationId
-            ).hide();
-
-            $("#moreMenu" + applicationId).toggle();
-        }
-
-
-        function GetStatusClass(status) {
-
-            if (status == "Interview") {
-                return "statusInterview";
-            }
-
-            if (status == "Offer") {
-                return "statusOffer";
-            }
-
-            if (status == "Rejected") {
-                return "statusRejected";
-            }
-
-            if (status == "Archived") {
-                return "statusArchived";
-            }
-
-            return "statusApplied";
-        }
-
-
-        function UpdateSummaryCards() {
-
-            var activeCount = 0;
-            var interviewCount = 0;
-            var offerCount = 0;
-            var rejectedCount = 0;
-            var archivedCount = 0;
-
-            allApplications.forEach(function (application) {
-
-                if (application.ApplicationStatus ==
-                    "Interview") {
-
-                    interviewCount++;
-                    activeCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Offer") {
-
-                    offerCount++;
-                    activeCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Rejected") {
-
-                    rejectedCount++;
-                }
-                else if (application.ApplicationStatus ==
-                    "Archived") {
-
-                    archivedCount++;
-                }
-                else {
-                    activeCount++;
-                }
-            });
-
-            $("#activeApplicationCount").text(activeCount);
-            $("#interviewCount").text(interviewCount);
-            $("#offerCount").text(offerCount);
-            $("#rejectedCount").text(rejectedCount);
-            $("#archivedCount").text(archivedCount);
-        }
-
-
-        function FormatDate(value) {
-
-            if (!value) {
-                return "—";
-            }
-
-            var date = new Date(value);
-
-            if (isNaN(date.getTime())) {
-                return value;
-            }
-
-            return date.toLocaleDateString();
-        }
-
-
-        function EscapeHtml(value) {
-
-            return $("<div>")
-                .text(value || "")
-                .html();
-        }
-
-
-        function ArchiveApplication(applicationId) {
-
-            $(".moreMenu").hide();
-
-            alert(
-                "Archive functionality will be connected next. " +
-                "Application ID: " +
-                applicationId
-            );
-        }
-
-
-        function DeleteApplication(applicationId) {
-
-            $(".moreMenu").hide();
-
-            alert(
-                "Delete functionality will be connected later. " +
-                "Application ID: " +
-                applicationId
-            );
-        }
-
-
-        function PreviousPage() {
-            alert("Pagination will be connected later.");
-        }
-
-
-        function NextPage() {
-            alert("Pagination will be connected later.");
-        }
-
-
-        function ShowPageError(message) {
-
-            $("#pageMessage")
-                .removeClass("successMessage")
-                .addClass("errorMessage")
-                .text(message);
-        }
-
-
-        $(document).click(function (event) {
-
-            if (!$(event.target).closest(
-                ".moreMenuWrapper"
-            ).length) {
-
-                $(".moreMenu").hide();
-            }
-        });</script>
-
 </body>
 </html>

@@ -2,9 +2,905 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title></title>
+
+    <meta name="description"
+          content="Search applications, recruiters, and documents in your job application tracker." />
+
+    <title>
+        Search and Filter - In Formation Jobs
+    </title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+    <script>
+        var allSearchRecords = [];
+        var filteredSearchRecords = [];
+
+
+        $(document).ready(function () {
+
+            LoadAccountInformation();
+
+            $("#searchText").on("input", FilterSearchRecords);
+
+            $("#recordTypeFilter").on("change", FilterSearchRecords);
+
+            $("#dateFrom").on("change", FilterSearchRecords);
+
+            $("#dateTo").on("change", FilterSearchRecords);
+
+            $("#searchSort").on("change", FilterSearchRecords);
+
+            $("#searchButton").on("click", FilterSearchRecords);
+
+            $("#clearSearchFilters").on("click", ClearSearchFilters);
+
+            FilterSearchRecords();
+        });
+
+
+        /*
+            Filters the temporary search records using text,
+            record type, and the selected date range.
+        */
+
+        function FilterSearchRecords() {
+
+            var searchText = $("#searchText").val().trim().toLowerCase();
+
+            var selectedType = $("#recordTypeFilter").val();
+
+            var dateFrom = $("#dateFrom").val();
+
+            var dateTo = $("#dateTo").val();
+
+            filteredSearchRecords = allSearchRecords.filter(function (record) {
+                        var searchableText =
+                            (
+                                (record.RecordType || "") +
+                                " " +
+                                (record.Title || "") +
+                                " " +
+                                (record.CompanyName || "") +
+                                " " +
+                                (record.RelatedApplicationName || "") +
+                                " " +
+                                (record.Notes || "") +
+                                " " +
+                                (record.Status || "") +
+                                " " +
+                                (record.SearchDate || "") +
+                                " " +
+                                (record.LastUpdated || "")
+                            ).toLowerCase();
+
+                        var matchesText = searchableText.includes(searchText);
+
+                        var matchesType = selectedType == "All" || record.RecordType == selectedType;
+
+                        var matchesDate = DoesRecordMatchDateRange(record, dateFrom, dateTo);
+
+                        return (matchesText && matchesType && matchesDate);
+                    }
+                );
+
+            SortSearchRecords();
+            DisplaySearchRecords();
+        }
+
+
+        /*
+            Checks the record's searchable date against
+            the selected date range.
+        */
+
+        function DoesRecordMatchDateRange(record, dateFrom, dateTo) {
+
+            if (!dateFrom && !dateTo) {
+                return true;
+            }
+
+            var recordDate = GetSearchDateValue(record.SearchDate || record.LastUpdated);
+
+            if (recordDate == 0) {
+                return false;
+            }
+
+            if (dateFrom) {
+
+                var minimumDate = GetSearchDateValue(dateFrom);
+
+                if (recordDate < minimumDate) {
+                    return false;
+                }
+            }
+
+            if (dateTo) {
+
+                var maximumDate = GetSearchDateValue(dateTo);
+
+                if (recordDate > maximumDate) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+
+        /*
+            Sorts search results.
+        */
+
+        function SortSearchRecords() {
+
+            var selectedSort = $("#searchSort").val();
+
+            filteredSearchRecords.sort(function (firstRecord, secondRecord) {
+
+                    if (selectedSort == "oldest") {
+                        return (
+                            GetSearchDateValue(firstRecord.LastUpdated) -
+                            GetSearchDateValue(secondRecord.LastUpdated)
+                        );
+                    }
+
+                    if (selectedSort == "titleAscending") {
+                        return (firstRecord.Title || "").localeCompare(secondRecord.Title || "");
+                    }
+
+                    if (selectedSort == "titleDescending") {
+                        return (secondRecord.Title || "").localeCompare(firstRecord.Title || "");
+                    }
+
+                    return (GetSearchDateValue(secondRecord.LastUpdated) - GetSearchDateValue(firstRecord.LastUpdated)
+                    );
+                }
+            );
+        }
+
+
+        /*
+            Converts a date value into a sortable number.
+        */
+
+        function GetSearchDateValue(value) {
+
+            if (!value) {
+                return 0;
+            }
+
+            var date = new Date(value + "T00:00:00");
+
+            if (isNaN(date.getTime())) {
+                return 0;
+            }
+
+            return date.getTime();
+        }
+
+
+        /*
+            Builds the search result table.
+        */
+
+        function DisplaySearchRecords() {
+
+            var tableBody = $("#searchResultsTableBody");
+
+            tableBody.empty();
+
+            $("#searchResultCount").text(
+                "Showing " +
+                filteredSearchRecords.length +
+                " result" +
+                (
+                    filteredSearchRecords.length ==
+                    1
+                        ? ""
+                        : "s"
+                )
+            );
+
+            if (filteredSearchRecords.length == 0) {
+                tableBody.append(
+                    "<tr>" +
+                        "<td colspan='8' " +
+                            "class='emptyTableMessage'>" +
+                            "No matching records were found." +
+                        "</td>" +
+                    "</tr>"
+                );
+
+                return;
+            }
+
+            filteredSearchRecords.forEach(
+                function (record) {
+
+                    var row =
+                        "<tr>" +
+
+                            "<td>" +
+                                BuildRecordTypeBadge(record.RecordType) +
+                            "</td>" +
+
+                            "<td>" +
+                                BuildMainResultLink(record) +
+                            "</td>" +
+
+                            "<td>" +
+                                EscapeHtml(record.CompanyName ||"—") +
+                            "</td>" +
+
+                            "<td>" +
+                                BuildRelatedApplicationLink(record) +
+                            "</td>" +
+
+                            "<td class='notesCell'>" +
+                                EscapeHtml(record.Notes || "—") +
+                            "</td>" +
+
+                            "<td>" +
+                                BuildRecordStatus(record) +
+                            "</td>" +
+
+                            "<td>" +
+                                FormatDate(record.LastUpdated) +
+                            "</td>" +
+
+                            "<td>" +
+                                BuildSearchActions(record) +
+                            "</td>" +
+
+                        "</tr>";
+
+                    tableBody.append(row);
+                }
+            );
+        }
+
+
+        /*
+            Creates the colored record-type badge.
+        */
+
+        function BuildRecordTypeBadge(recordType) {
+
+            var typeClass = "typeApplication";
+
+            if (recordType == "Recruiter") {
+                typeClass = "typeRecruiter";
+            }
+            else if (
+                recordType == "Document"
+            ) {
+                typeClass = "typeDocument";
+            }
+
+            return (
+                "<span class='recordTypeBadge " +
+                    typeClass +
+                    "'>" +
+                    EscapeHtml(recordType) +
+                "</span>"
+            );
+        }
+
+
+        /*
+            Creates the main result link.
+        */
+
+        function BuildMainResultLink(record) {
+
+            var destination = GetRecordDestination(record);
+
+            return (
+                "<a class='resultLink' href='" +
+                    destination +
+                    "'>" +
+                    EscapeHtml(record.Title) +
+                "</a>"
+            );
+        }
+
+
+        /*
+            Creates the related application link.
+        */
+
+        function BuildRelatedApplicationLink(record) {
+
+            if (!record.RelatedApplicationId || !record.RelatedApplicationName) {
+                return "—";
+            }
+
+            return (
+                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "'>" +
+                    EscapeHtml(record.RelatedApplicationName) +
+                "</a>"
+            );
+        }
+
+
+        /*
+            Displays an application status when one exists.
+        */
+
+        function BuildRecordStatus(record) {
+
+            if (record.RecordType != "Application") {
+                return "—";
+            }
+
+            var statusClass = "searchStatusApplied";
+
+            if (record.Status == "Interview") {
+                statusClass = "searchStatusInterview";
+            }
+            else if (record.Status == "Offer") {
+                statusClass = "searchStatusOffer";
+            }
+            else if (record.Status == "Rejected") {
+                statusClass = "searchStatusRejected";
+            }
+
+            return (
+                "<span class='searchStatusBadge " + statusClass + "'>" +
+                    EscapeHtml(record.Status || "Applied") +
+                "</span>"
+            );
+        }
+
+
+        /*
+            Creates the Open action for each result.
+        */
+
+        function BuildSearchActions(record) {
+
+            return (
+                "<a class='resultActionLink' href='" + GetRecordDestination(record) + "'>" +
+                    "Open" +
+                "</a>"
+            );
+        }
+
+
+        /*
+            Returns the correct details page for each
+            type of search result.
+        */
+
+        function GetRecordDestination(record) {
+
+            if (record.RecordType == "Application"
+            ) {
+                return ("application-details.html?applicationId=" + record.RecordId);
+            }
+
+            if (record.RecordType == "Recruiter"
+            ) {
+                return ("edit-recruiter.html?recruiterId=" + record.RecordId);
+            }
+
+            return ("document-details.html?documentId=" + record.RecordId);
+        }
+
+
+        /*
+            Restores all search controls.
+        */
+
+        function ClearSearchFilters() {
+
+            $("#searchText").val("");
+            $("#recordTypeFilter").val("All");
+            $("#dateFrom").val("");
+            $("#dateTo").val("");
+            $("#searchSort").val("newest");
+
+            FilterSearchRecords();
+        }
+
+    </script>
+
+    <style>
+
+        /*
+            Search page heading.
+
+            Shared page width and breadcrumbs come
+            from site.css.
+        */
+
+        .pageHeading {
+            margin-bottom: 22px;
+        }
+
+            .pageHeading h2 {
+                margin: 0 0 8px;
+                color: #0f172a;
+                font-size: 36px;
+            }
+
+            .pageHeading p {
+                margin: 0;
+                color: #64748b;
+                font-size: 16px;
+            }
+
+
+        /*
+            Shared card appearance for the search page.
+        */
+
+        .searchCard {
+            margin-bottom: 20px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            background-color: white;
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
+        }
+
+
+        /*
+            Main search field.
+        */
+
+        .mainSearchField {
+            margin-bottom: 18px;
+        }
+
+            .mainSearchField input {
+                min-height: 46px;
+                font-size: 15px;
+            }
+
+
+        /*
+            Secondary search controls.
+        */
+
+        .searchControlGrid {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr 1fr auto;
+            gap: 18px;
+            align-items: end;
+        }
+
+            .searchControlGrid .formField {
+                margin-bottom: 0;
+            }
+
+        .dateRangeFields {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dateRangeSeparator {
+            color: #64748b;
+            text-align: center;
+        }
+
+        .searchButtonArea {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+            .searchButtonArea button {
+                min-height: 43px;
+                white-space: nowrap;
+            }
+
+        #searchButton {
+            min-width: 145px;
+        }
+
+
+        /*
+            Search result heading.
+        */
+
+        .searchResultsHeading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 14px;
+        }
+
+            .searchResultsHeading h3 {
+                margin: 0;
+                color: #0f172a;
+                font-size: 20px;
+            }
+
+        #searchResultCount {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+
+        /*
+            Search result table.
+        */
+
+        .tableWrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .searchResultsTable {
+            width: 100%;
+            min-width: 1180px;
+            border-collapse: collapse;
+        }
+
+            .searchResultsTable th,
+            .searchResultsTable td {
+                padding: 13px 10px;
+                border-bottom: 1px solid #e2e8f0;
+                text-align: left;
+                vertical-align: middle;
+            }
+
+            .searchResultsTable th {
+                background-color: #f8fafc;
+                color: #475569;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+
+            .searchResultsTable td {
+                color: #334155;
+                font-size: 13px;
+            }
+
+            .searchResultsTable tbody tr:hover {
+                background-color: #f8fafc;
+            }
+
+        .notesCell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .emptyTableMessage {
+            padding: 34px;
+            color: #64748b;
+            text-align: center;
+        }
+
+
+        /*
+            Search result links.
+        */
+
+        .resultLink,
+        .resultActionLink {
+            color: #1556d8;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+            .resultLink:hover,
+            .resultActionLink:hover {
+                text-decoration: underline;
+            }
+
+
+        /*
+            Record type badges.
+        */
+
+        .recordTypeBadge {
+            display: inline-block;
+            min-width: 84px;
+            padding: 5px 9px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .typeApplication {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .typeRecruiter {
+            background-color: #ffedd5;
+            color: #c2410c;
+        }
+
+        .typeDocument {
+            background-color: #ede9fe;
+            color: #7c3aed;
+        }
+
+
+        /*
+            Application status badges.
+        */
+
+        .searchStatusBadge {
+            display: inline-block;
+            min-width: 78px;
+            padding: 5px 9px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .searchStatusApplied {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .searchStatusInterview {
+            background-color: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .searchStatusOffer {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .searchStatusRejected {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
 </head>
+
 <body>
+
+    <header>
+
+        <div>
+
+            <h1>
+                In Formation Jobs
+            </h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <span>
+                Search and Filter
+            </span>
+
+        </nav>
+
+        <div class="pageHeading">
+
+            <h2>
+                Search and Filter
+            </h2>
+
+            <p>
+                Search across applications, recruiters,
+                and documents in one place.
+            </p>
+
+        </div>
+
+        <section class="searchCard">
+
+            <div class="formField mainSearchField">
+
+                <label for="searchText">
+                    Search Everything
+                </label>
+
+                <input type="search"
+                       id="searchText"
+                       placeholder="Search everything—names, companies, titles, notes, dates, documents, recruiters, and more..." />
+
+            </div>
+
+            <div class="searchControlGrid">
+
+                <div class="formField">
+
+                    <label for="recordTypeFilter">
+                        Type
+                    </label>
+
+                    <select id="recordTypeFilter">
+
+                        <option value="All">
+                            All Records
+                        </option>
+
+                        <option value="Application">
+                            Applications
+                        </option>
+
+                        <option value="Recruiter">
+                            Recruiters
+                        </option>
+
+                        <option value="Document">
+                            Documents
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="formField">
+
+                    <label>
+                        Date Range
+                    </label>
+
+                    <div class="dateRangeFields">
+
+                        <input type="date"
+                               id="dateFrom"
+                               aria-label="Date range start" />
+
+                        <span class="dateRangeSeparator">
+                            –
+                        </span>
+
+                        <input type="date"
+                               id="dateTo"
+                               aria-label="Date range end" />
+
+                    </div>
+
+                </div>
+
+                <div class="formField">
+
+                    <label for="searchSort">
+                        Sort By
+                    </label>
+
+                    <select id="searchSort">
+
+                        <option value="newest">
+                            Most Recent
+                        </option>
+
+                        <option value="oldest">
+                            Oldest
+                        </option>
+
+                        <option value="titleAscending">
+                            Title / Name (A-Z)
+                        </option>
+
+                        <option value="titleDescending">
+                            Title / Name (Z-A)
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="searchButtonArea">
+
+                    <button type="button"
+                            id="clearSearchFilters"
+                            class="secondaryButton">
+                        Clear Filters
+                    </button>
+
+                    <button type="button"
+                            id="searchButton"
+                            class="primaryButton">
+                        Search
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="searchCard">
+
+            <div class="searchResultsHeading">
+
+                <h3>
+                    Search Results
+                </h3>
+
+                <span id="searchResultCount">
+                    Showing 0 results
+                </span>
+
+            </div>
+
+            <div class="tableWrapper">
+
+                <table class="searchResultsTable">
+
+                    <thead>
+
+                        <tr>
+                            <th>Type</th>
+                            <th>Title / Name</th>
+                            <th>Company</th>
+                            <th>Related Application</th>
+                            <th>Notes</th>
+                            <th>Status</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="searchResultsTableBody">
+
+                        <tr>
+
+                            <td colspan="8"
+                                class="emptyTableMessage">
+                                Loading search records...
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <p id="pageMessage"></p>
+
+        </section>
+
+    </div>
 
 </body>
 </html>

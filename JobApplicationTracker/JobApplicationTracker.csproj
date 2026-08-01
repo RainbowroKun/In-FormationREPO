@@ -91,6 +91,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="add-application.html" />
+    <Content Include="add-follow-up.html" />
+    <Content Include="add-interview.html" />
+    <Content Include="add-recruiter.html" />
     <Content Include="Database\applcation_document_recruiters_table_creation.sql" />
     <Content Include="Database\users_and_account_requests_table_creation.sql" />
     <Content Include="Global.asax" />
@@ -98,14 +101,12 @@
     <Content Include="index.html" />
     <Content Include="login.html" />
     <Content Include="ProjectServices.asmx" />
-    <Content Include="recruiter-details.html" />
-    <Content Include="recruiter-application.html" />
-    <Content Include="reminder-interviews-details.html" />
     <Content Include="reminder-interviews.html" />
     <Content Include="request-account.html" />
     <Content Include="search.html" />
     <Content Include="site.css" />
     <Content Include="site.js" />
+    <Content Include="view-applications.html" />
     <Content Include="view-recruiters.html" />
     <Content Include="Web.config" />
   </ItemGroup>
