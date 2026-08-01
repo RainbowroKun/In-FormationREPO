@@ -80,7 +80,29 @@
 
                     actionCell.append(promoteButton);
                 }
+                     if ((user.Role || "").toLowerCase() == "user") {
 
+                 var promoteButton =
+                    $("<button type='button'>Promote</button>");
+
+                 promoteButton.click(function () {
+                    PromoteUser(user.UserId);
+                 });
+
+                 actionCell.append(promoteButton);
+                    }
+
+                    var deleteButton =
+                    $("<button type='button'>Delete</button>");
+
+                    deleteButton.click(function () {
+                 DeleteUser(user.UserId);
+                    });
+
+                    actionCell.append(deleteButton);
+
+                    row.append(actionCell);
+                 tableBody.append(row);
                 row.append(actionCell);
                 tableBody.append(row);
             });
@@ -126,6 +148,40 @@
 
             ShowPageMessage(
                 "Unable to promote the user."
+            );
+        }
+    });
+}
+function DeleteUser(userId) {
+
+    if (!confirm("Delete this user account? This cannot be undone.")) {
+        return;
+    }
+
+    var parameters = JSON.stringify({
+        userId: userId
+    });
+
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/DeleteUser",
+        data: parameters,
+        contentType:
+            "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            ShowPageMessage(msg.d);
+            LoadUsers();
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            ShowPageMessage(
+                "Unable to delete the user."
             );
         }
     });

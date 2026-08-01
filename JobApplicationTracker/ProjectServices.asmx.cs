@@ -544,6 +544,61 @@ public string PromoteUser(int userId)
             e.Message;
     }
 }
+[WebMethod(EnableSession = true)]
+public string DeleteUser(int userId)
+{
+    if (Session["userId"] == null ||
+        Session["role"] == null ||
+        Session["role"].ToString().ToLower() != "admin")
+    {
+        return "Administrator access is required.";
+    }
+
+    int currentUserId =
+        Convert.ToInt32(Session["userId"]);
+
+    if (currentUserId == userId)
+    {
+        return "You cannot delete your own account.";
+    }
+
+    try
+    {
+        using (MySqlConnection con =
+            new MySqlConnection(getConString()))
+        {
+            con.Open();
+
+            string query = @"
+                DELETE FROM users
+                WHERE user_id = @userId;";
+
+            using (MySqlCommand command =
+                new MySqlCommand(query, con))
+            {
+                command.Parameters.AddWithValue(
+                    "@userId",
+                    userId
+                );
+
+                int changedRows =
+                    command.ExecuteNonQuery();
+
+                if (changedRows == 0)
+                {
+                    return "The user account was not found.";
+                }
+            }
+        }
+
+        return "User account deleted successfully.";
+    }
+    catch (Exception e)
+    {
+        return "Unable to delete the user. Error: " +
+            e.Message;
+    }
+}
 
         ////////////////////////////////////////////////////////////////////////
         /// Page Utility
