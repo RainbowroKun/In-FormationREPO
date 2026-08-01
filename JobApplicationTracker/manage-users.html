@@ -14,12 +14,122 @@
 
     <script type="text/javascript">
 
-        $(document).ready(function () {
+       $(document).ready(function () {
 
-            LoadAccountInformation();
-            CheckAdminAccess();
+        LoadAccountInformation();
+     CheckAdminAccess();
+     LoadUsers();
         });
 
+        function LoadUsers() {
+
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/GetUsers",
+        data: "{}",
+        contentType:
+            "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            var users = msg.d || [];
+            var tableBody = $("#usersTableBody");
+
+            tableBody.empty();
+            $("#emptyUsersMessage").hide();
+
+            if (users.length == 0) {
+                $("#emptyUsersMessage").show();
+                return;
+            }
+
+            users.forEach(function (user) {
+
+                var row = $("<tr></tr>");
+
+                row.append(
+                    $("<td></td>").text(
+                        (user.FirstName || "") + " " +
+                        (user.LastName || "")
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(user.Email || "")
+                );
+
+                row.append(
+                    $("<td></td>").text(user.Username || "")
+                );
+
+                row.append(
+                    $("<td></td>").text(user.Role || "")
+                );
+
+                var actionCell = $("<td></td>");
+
+                if ((user.Role || "").toLowerCase() == "user") {
+
+                    var promoteButton =
+                        $("<button type='button'>Promote</button>");
+
+                    promoteButton.click(function () {
+                        PromoteUser(user.UserId);
+                    });
+
+                    actionCell.append(promoteButton);
+                }
+
+                row.append(actionCell);
+                tableBody.append(row);
+            });
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            ShowPageMessage(
+                "Unable to load user accounts."
+            );
+        }
+    });
+}
+        function PromoteUser(userId) {
+
+    if (!confirm("Promote this user to administrator?")) {
+        return;
+    }
+
+    var parameters = JSON.stringify({
+        userId: userId
+    });
+
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/PromoteUser",
+        data: parameters,
+        contentType:
+            "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            ShowPageMessage(msg.d);
+            LoadUsers();
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            ShowPageMessage(
+                "Unable to promote the user."
+            );
+        }
+    });
+}
         function CheckAdminAccess() {
 
             $.ajax({
@@ -225,9 +335,30 @@
 
             <section id="usersSection">
 
-                <div class="placeholderMessage">
-                    User account management will be added separately.
-                </div>
+                <div class="tableWrapper">
+
+                <table>
+
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="usersTableBody">
+            </tbody>
+
+            </table>
+
+         </div>
+
+         <p id="emptyUsersMessage">
+         No user accounts were found.
+            </p>
 
             </section>
 
