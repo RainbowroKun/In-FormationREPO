@@ -1,0 +1,551 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="description"
+          content="Review pending account requests." />
+
+    <title>Account Requests - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js?v=2"></script>
+    <link rel="stylesheet" href="site.css?v=2" />
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            LoadAccountInformation();
+            CheckAdminAccess();
+        });
+
+        function CheckAdminAccess() {
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetCurrentUserRole",
+                data: "{}",
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    var userInfo = msg.d;
+
+                    if (userInfo == "Not Logged In") {
+
+                        ShowRequestMessage(
+                            "You must be logged in.",
+                            "error"
+                        );
+
+                        $("#requestsSection").hide();
+                        return;
+                    }
+
+                    var userParts = userInfo.split("|");
+
+                    if (userParts.length < 2 ||
+                        userParts[1].trim().toLowerCase() != "admin") {
+
+                        ShowRequestMessage(
+                            "Only administrators can view account requests.",
+                            "error"
+                        );
+
+                        $("#requestsSection").hide();
+                        return;
+                    }
+
+                    LoadAccountRequests();
+                },
+
+                error: function () {
+
+                    ShowRequestMessage(
+                        "Unable to verify administrator access.",
+                        "error"
+                    );
+
+                    $("#requestsSection").hide();
+                }
+            });
+        }
+
+        function LoadAccountRequests() {
+
+            $("#requestsTableBody").empty();
+            $("#emptyMessage").hide();
+
+            ShowRequestMessage(
+                "Loading account requests...",
+                "normal"
+            );
+
+            $.ajax({
+                type: "POST",
+                url:
+                    "ProjectServices.asmx/GetPendingAccountRequests",
+                data: "{}",
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    ClearRequestMessage();
+
+                    var requests = msg.d;
+
+                    if (!requests || requests.length == 0) {
+
+                        $("#emptyMessage").show();
+                        return;
+                    }
+
+                    DisplayAccountRequests(requests);
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr.responseText);
+
+                    ShowRequestMessage(
+                        "Unable to load account requests.",
+                        "error"
+                    );
+                }
+            });
+        }
+
+        function DisplayAccountRequests(requests) {
+
+            var tableBody =
+                $("#requestsTableBody");
+
+            tableBody.empty();
+
+            requests.forEach(function (request) {
+
+                var requestedDate =
+                    FormatRequestedDate(
+                        request.requested_at ||
+                        request.RequestedAt
+                    );
+
+                var row =
+                    $("<tr></tr>");
+
+                row.append(
+                    $("<td></td>").text(
+                        request.request_id ||
+                        request.RequestId
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(
+                        request.first_name ||
+                        request.FirstName ||
+                        ""
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(
+                        request.last_name ||
+                        request.LastName ||
+                        ""
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(
+                        request.email ||
+                        request.Email ||
+                        ""
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(
+                        request.username ||
+                        request.Username ||
+                        ""
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(
+                        request.status ||
+                        request.Status ||
+                        ""
+                    )
+                );
+
+                row.append(
+                    $("<td></td>").text(requestedDate)
+                );
+
+                var requestId =
+                request.request_id ||
+                request.RequestId;
+                var actionsCell =
+                $("<td></td>");
+
+                var approveButton =
+              $("<button type='button'>Approve</button>");
+
+                approveButton.addClass("approveButton");
+
+                approveButton.click(function () {
+                ApproveRequest(requestId);
+             });
+
+                var denyButton =
+                $("<button type='button'>Deny</button>");
+
+             denyButton.addClass("denyButton");
+
+                denyButton.click(function () {
+             DenyRequest(requestId);
+             });
+
+                actionsCell.append(approveButton);
+                actionsCell.append(denyButton);
+
+                row.append(actionsCell);
+                tableBody.append(row);
+            });
+        }
+        function ApproveRequest(requestId) {
+
+    if (!confirm("Approve this account request?")) {
+        return;
+    }
+
+    UpdateAccountRequest(
+        "ProjectServices.asmx/ApproveAccountRequest",
+        requestId
+    );
+}
+
+function DenyRequest(requestId) {
+
+    if (!confirm("Deny this account request?")) {
+        return;
+    }
+
+    UpdateAccountRequest(
+        "ProjectServices.asmx/RejectAccountRequest",
+        requestId
+    );
+}
+
+function UpdateAccountRequest(webMethod, requestId) {
+
+    var parameters = JSON.stringify({
+        requestId: requestId
+    });
+
+    $.ajax({
+        type: "POST",
+        url: webMethod,
+        data: parameters,
+        contentType:
+            "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (msg) {
+
+            ShowRequestMessage(
+                msg.d,
+                "success"
+            );
+
+            LoadAccountRequests();
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            ShowRequestMessage(
+                "Unable to update the account request.",
+                "error"
+            );
+        }
+    });
+}
+        function FormatRequestedDate(dateValue) {
+
+            if (!dateValue) {
+                return "";
+            }
+
+            var parsedDate =
+                new Date(dateValue);
+
+            if (isNaN(parsedDate.getTime())) {
+                return dateValue;
+            }
+
+            return parsedDate.toLocaleString();
+        }
+
+        function ShowRequestMessage(message, type) {
+
+            var pageMessage =
+                $("#pageMessage");
+
+            pageMessage
+                .removeClass(
+                    "successMessage errorMessage normalMessage"
+                )
+                .text(message);
+
+            if (type == "error") {
+                pageMessage.addClass("errorMessage");
+            }
+            else if (type == "success") {
+                pageMessage.addClass("successMessage");
+            }
+            else {
+                pageMessage.addClass("normalMessage");
+            }
+        }
+
+        function ClearRequestMessage() {
+
+            $("#pageMessage")
+                .removeClass(
+                    "successMessage errorMessage normalMessage"
+                )
+                .text("");
+        }
+
+    </script>
+
+    <style>
+
+        .requestsCard {
+            padding: 32px 38px;
+            background-color: white;
+            border-radius: 9px;
+            box-shadow:
+                0 3px 12px rgba(0, 0, 0, 0.13);
+        }
+
+        .pageHeading {
+            margin-bottom: 26px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #d8dee8;
+        }
+
+        .pageHeading h2 {
+            margin: 0 0 8px 0;
+            color: #0f172a;
+            font-size: 36px;
+        }
+
+        .pageHeading p {
+            margin: 0;
+            color: #64748b;
+        }
+
+        .tableWrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #d8dee8;
+            text-align: left;
+        }
+
+        th {
+            background-color: #eef2f7;
+            color: #1f3c88;
+            font-weight: bold;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        #pageMessage,
+        #emptyMessage {
+            margin: 18px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .errorMessage {
+            color: #dc2626;
+        }
+
+        .successMessage {
+            color: #15803d;
+        }
+
+        .normalMessage {
+            color: #475569;
+        }
+
+        #emptyMessage {
+            display: none;
+            padding: 24px;
+            color: #64748b;
+            background-color: #f8fafc;
+            border-radius: 7px;
+        }
+         .toggleButtons {
+         display: flex;
+         gap: 10px;
+         margin-bottom: 22px;
+        }
+
+     .toggleButton {
+        padding: 10px 18px;
+        border: 1px solid #1f3c88;
+        border-radius: 6px;
+        background-color: white;
+        color: #1f3c88;
+        font-weight: bold;
+        cursor: pointer;
+        }
+
+        .toggleButton:hover {
+            background-color: #eef2f7;
+        }
+
+        .activeToggle {
+            background-color: #1f3c88;
+            color: white;
+        }
+ </style>
+</head>
+
+<body>
+
+    <header>
+
+        <div>
+
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <span>Account Requests</span>
+
+        </nav>
+
+        <main class="requestsCard">
+
+            <div class="pageHeading">
+                <div class="toggleButtons">
+
+            <button type="button"
+            class="toggleButton activeToggle">
+             Account Requests
+             </button>
+
+         <button type="button"
+            class="toggleButton"
+            onclick="window.location.href='manage-users.html';">
+            User Accounts
+         </button>
+
+         </div>
+                <h2>Pending Account Requests</h2>
+
+                <p>
+                    View users who are waiting for account approval.
+                </p>
+
+            </div>
+
+            <p id="pageMessage"></p>
+
+            <section id="requestsSection">
+
+                <div class="tableWrapper">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Request ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Username</th>
+                                <th>Status</th>
+                                <th>Requested</th>
+                                <th>Actions</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="requestsTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p id="emptyMessage">
+                    There are currently no pending account requests.
+                </p>
+
+            </section>
+
+        </main>
+
+    </div>
+
+</body>
+</html>
