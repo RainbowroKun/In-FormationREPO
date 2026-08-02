@@ -23,6 +23,8 @@
 
             LoadAccountInformation();
 
+            LoadSearchRecords();
+
             $("#searchText").on("input", FilterSearchRecords);
 
             $("#recordTypeFilter").on("change", FilterSearchRecords);
@@ -37,7 +39,6 @@
 
             $("#clearSearchFilters").on("click", ClearSearchFilters);
 
-            FilterSearchRecords();
         });
 
 
@@ -45,7 +46,32 @@
             Filters the temporary search records using text,
             record type, and the selected date range.
         */
+function LoadSearchRecords() {
 
+    $.ajax({
+
+        type: "POST",
+        url: "ProjectServices.asmx/GetSearchRecords",
+        contentType: "application/json; charset=utf-8",
+        data: "{}",
+        dataType: "json",
+
+        success: function (response) {
+
+            allSearchRecords = response.d || [];
+
+            FilterSearchRecords();
+        },
+
+        error: function () {
+
+            ShowPageMessage(
+                "Unable to load search records.",
+                "error"
+            );
+        }
+    });
+}
         function FilterSearchRecords() {
 
             var searchText = $("#searchText").val().trim().toLowerCase();

@@ -1229,6 +1229,157 @@ public List<RecruiterSummary> GetRecruiters()
     return recruiters;
 }
 
+[WebMethod(EnableSession = true)]
+public List<SearchRecordSummary> GetSearchRecords()
+{
+    List<SearchRecordSummary> records =
+        new List<SearchRecordSummary>();
+
+    if (Session["username"] == null)
+    {
+        return records;
+    }
+
+    try
+    {
+        using (MySqlConnection con =
+            new MySqlConnection(getConString()))
+        {
+            con.Open();
+
+            string query = @"
+                SELECT
+                    'Application' AS record_type,
+                    a.application_id AS record_id,
+                    a.job_title AS title,
+                    a.company_name,
+                    a.application_id AS related_application_id,
+                    a.job_title AS related_application_name,
+                    a.notes,
+                    a.application_status AS record_status,
+                    DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS search_date,
+                    DATE_FORMAT(a.updated_at, '%Y-%m-%d') AS last_updated
+                FROM applications a
+                INNER JOIN users u
+                    ON a.user_id = u.user_id
+                WHERE u.username = @username
+
+                UNION ALL
+
+                SELECT
+                    'Recruiter' AS record_type,
+                    r.recruiter_id AS record_id,
+                    CONCAT(r.first_name, ' ', r.last_name) AS title,
+                    r.company_name,
+                    a.application_id AS related_application_id,
+                    a.job_title AS related_application_name,
+                    r.notes,
+                    '' AS record_status,
+                    COALESCE(
+                        DATE_FORMAT(r.last_contact_date, '%Y-%m-%d'),
+                        DATE_FORMAT(r.follow_up_reminder_date, '%Y-%m-%d'),
+                        DATE_FORMAT(r.updated_at, '%Y-%m-%d')
+                    ) AS search_date,
+                    DATE_FORMAT(r.updated_at, '%Y-%m-%d') AS last_updated
+                FROM recruiters r
+                INNER JOIN applications a
+                    ON r.application_id = a.application_id
+                INNER JOIN users u
+                    ON a.user_id = u.user_id
+                WHERE u.username = @username
+
+                UNION ALL
+
+                SELECT
+                    'Document' AS record_type,
+                    d.document_id AS record_id,
+                    d.file_name AS title,
+                    a.company_name,
+                    a.application_id AS related_application_id,
+                    a.job_title AS related_application_name,
+                    d.notes,
+                    '' AS record_status,
+                    DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS search_date,
+                    DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS last_updated
+                FROM application_documents d
+                INNER JOIN applications a
+                    ON d.application_id = a.application_id
+                INNER JOIN users u
+                    ON a.user_id = u.user_id
+                WHERE u.username = @username
+
+                ORDER BY last_updated DESC;";
+
+            using (MySqlCommand cmd =
+                new MySqlCommand(query, con))
+            {
+                cmd.Parameters.AddWithValue(
+                    "@username",
+                    Session["username"].ToString()
+                );
+
+                using (MySqlDataReader reader =
+                    cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        SearchRecordSummary record =
+                            new SearchRecordSummary();
+
+                        record.RecordType =
+                            reader["record_type"].ToString();
+
+                        record.RecordId =
+                            Convert.ToInt32(reader["record_id"]);
+
+                        record.Title =
+                            reader["title"].ToString();
+
+                        record.CompanyName =
+                            reader["company_name"].ToString();
+
+                        record.RelatedApplicationId =
+                            Convert.ToInt32(
+                                reader["related_application_id"]
+                            );
+
+                        record.RelatedApplicationName =
+                            reader["related_application_name"]
+                                .ToString();
+
+                        record.Notes =
+                            reader["notes"] == DBNull.Value
+                                ? ""
+                                : reader["notes"].ToString();
+
+                        record.Status =
+                            reader["record_status"] == DBNull.Value
+                                ? ""
+                                : reader["record_status"].ToString();
+
+                        record.SearchDate =
+                            reader["search_date"] == DBNull.Value
+                                ? ""
+                                : reader["search_date"].ToString();
+
+                        record.LastUpdated =
+                            reader["last_updated"] == DBNull.Value
+                                ? ""
+                                : reader["last_updated"].ToString();
+
+                        records.Add(record);
+                    }
+                }
+            }
+        }
+    }
+    catch
+    {
+        return new List<SearchRecordSummary>();
+    }
+
+    return records;
+}
 
 public class RecruiterSummary
 {
@@ -1253,6 +1404,28 @@ public class RecruiterSummary
     public string LastContactDate { get; set; }
 
     public string Notes { get; set; }
+}
+public class SearchRecordSummary
+{
+    public string RecordType { get; set; }
+
+    public int RecordId { get; set; }
+
+    public string Title { get; set; }
+
+    public string CompanyName { get; set; }
+
+    public int RelatedApplicationId { get; set; }
+
+    public string RelatedApplicationName { get; set; }
+
+    public string Notes { get; set; }
+
+    public string Status { get; set; }
+
+    public string SearchDate { get; set; }
+
+    public string LastUpdated { get; set; }
 }
     }
 
