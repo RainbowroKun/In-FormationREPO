@@ -303,6 +303,12 @@ public class AccountRequestSummary
         [WebMethod(EnableSession = true)]
         public string ApproveAccountRequest(int requestId)
         {
+            if (Session["userId"] == null ||
+         Session["role"] == null ||
+         Session["role"].ToString().ToLower() != "admin")
+            {
+         return "Administrator access is required.";
+            }
             try
             {
                 using (MySqlConnection con = new MySqlConnection(getConString()))
@@ -373,6 +379,12 @@ public class AccountRequestSummary
         [WebMethod(EnableSession = true)]
         public string RejectAccountRequest(int requestId)
         {
+            if (Session["userId"] == null ||
+            Session["role"] == null ||
+             Session["role"].ToString().ToLower() != "admin")
+        {
+        return "Administrator access is required.";
+        }
             try
             {
                 using (MySqlConnection con = new MySqlConnection(getConString()))
