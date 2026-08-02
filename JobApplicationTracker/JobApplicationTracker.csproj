@@ -96,6 +96,7 @@
     <Content Include="add-recruiter.html" />
     <Content Include="Database\applcation_document_recruiters_table_creation.sql" />
     <Content Include="Database\users_and_account_requests_table_creation.sql" />
+    <Content Include="documents-details.html" />
     <Content Include="Global.asax" />
     <Content Include="home-page.html" />
     <Content Include="index.html" />
@@ -122,6 +123,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DownloadDocument.ashx" />
     <None Include="packages.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>

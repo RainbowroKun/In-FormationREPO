@@ -181,8 +181,7 @@
 
                 tableBody.append(
                     "<tr>" +
-                        "<td colspan='8'>" +
-                            "class='emptyTableMessage'>" +
+                        "<td colspan='8' class='emptyTableMessage'>" +
                             "No applications were found." +
                         "</td>" +
                     "</tr>"
@@ -250,7 +249,7 @@
 
                 (
                     filteredApplications.length == 1
-                        ? "."
+                        ? "." 
                         : "s."
                 )
             );
@@ -316,7 +315,7 @@
                                 archiveText +
                             "</button>" +
 
-                            "<button type='button' class='deleteAction' onclick='ToggleArchiveApplication(" + applicationId + ");'>" +
+                            "<button type='button' class='deleteAction' onclick='DeleteApplication(" + applicationId + ");'>" +
                                 "Delete" +
                             "</button>" +
 
