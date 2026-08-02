@@ -13,51 +13,7 @@
     <link rel="stylesheet" href="site.css" />
 
     <script>
-        /*
-            Temporary application and recruiter options.
 
-            Your team can later replace these arrays with AJAX calls
-            that load the logged-in user's applications and recruiters.
-        */
-
-        var applications = [
-            {
-                ApplicationId: 1,
-                CompanyName: "Whatnot",
-                JobTitle: "Trust & Safety Agent"
-            },
-            {
-                ApplicationId: 2,
-                CompanyName: "Honeywell",
-                JobTitle: "Program Control Specialist"
-            },
-            {
-                ApplicationId: 3,
-                CompanyName: "Arizona Auditor General",
-                JobTitle: "IT Audit Intern"
-            }
-        ];
-
-        var recruiters = [
-            {
-                RecruiterId: 1,
-                FirstName: "Eric",
-                LastName: "Swartz",
-                CompanyName: "Whatnot"
-            },
-            {
-                RecruiterId: 2,
-                FirstName: "Vickie",
-                LastName: "Shen",
-                CompanyName: "Equitable Advisors"
-            },
-            {
-                RecruiterId: 3,
-                FirstName: "Sarah",
-                LastName: "Chen",
-                CompanyName: "Honeywell"
-            }
-        ];
 
 
         $(document).ready(function () {
@@ -77,21 +33,73 @@
             UpdateLinkType();
         });
 
+function LoadFollowUpOptions() {
 
-        /*
-            Adds the temporary applications and recruiters
-            to their corresponding dropdowns.
-        */
+    LoadApplicationOptions();
+    LoadRecruiterOptions();
+}
 
-        function LoadFollowUpOptions() {
+function LoadApplicationOptions() {
+
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/GetApplications",
+        contentType: "application/json; charset=utf-8",
+        data: "{}",
+        dataType: "json",
+
+        success: function (response) {
+
+            var applications = response.d || [];
+
+            $("#applicationId").empty();
+
+            $("#applicationId").append(
+                $("<option>")
+                    .val("")
+                    .text("Select an application")
+                    .prop("disabled", true)
+                    .prop("selected", true)
+            );
 
             applications.forEach(function (application) {
+
                 $("#applicationId").append(
                     $("<option>")
                         .val(application.ApplicationId)
-                        .text(application.CompanyName + " — " + application.JobTitle)
+                        .text(application.CompanyName + " - " + application.JobTitle)
                 );
             });
+        },
+
+        error: function () {
+            ShowPageMessage("Unable to load applications.", "error");
+        }
+    });
+}
+
+function LoadRecruiterOptions() {
+
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/GetRecruiters",
+        contentType: "application/json; charset=utf-8",
+        data: "{}",
+        dataType: "json",
+
+        success: function (response) {
+
+            var recruiters = response.d || [];
+
+            $("#recruiterId").empty();
+
+            $("#recruiterId").append(
+                $("<option>")
+                    .val("")
+                    .text("Select a recruiter")
+                    .prop("disabled", true)
+                    .prop("selected", true)
+            );
 
             recruiters.forEach(function (recruiter) {
 
@@ -101,10 +109,17 @@
                 $("#recruiterId").append(
                     $("<option>")
                         .val(recruiter.RecruiterId)
-                        .text(recruiterName + " — " + recruiter.CompanyName)
+                        .text(recruiterName + " - " + recruiter.CompanyName)
                 );
             });
+        },
+
+        error: function () {
+            ShowPageMessage("Unable to load recruiters.", "error");
         }
+    });
+}
+
 
 
         /*
@@ -180,19 +195,43 @@
                 followUpDate: followUpDate
             };
 
-            console.log(parameters);
+            $("#saveFollowUpButton")
+    .prop("disabled", true)
+    .text("Saving...");
 
-            /*
-                Your team can replace the placeholder message
-                with an AJAX call such as:
+$.ajax({
+    type: "POST",
+    url: "ProjectServices.asmx/SetFollowUpDate",
+    contentType: "application/json; charset=utf-8",
+    data: JSON.stringify(parameters),
+    dataType: "json",
 
-                ProjectServices.asmx/SetFollowUpDate
-            */
+    success: function (response) {
 
-            ShowPageMessage(
-                "Follow-up information is ready to be connected to the backend.",
-                "success"
-            );
+        var message = response.d || "";
+
+        if (message.toLowerCase().includes("successfully")) {
+            ShowPageMessage(message, "success");
+            ClearFollowUpForm();
+        }
+        else {
+            ShowPageMessage(message, "error");
+        }
+    },
+
+    error: function () {
+        ShowPageMessage(
+            "Unable to connect to the server.",
+            "error"
+        );
+    },
+
+    complete: function () {
+        $("#saveFollowUpButton")
+            .prop("disabled", false)
+            .text("Save Follow-Up");
+    }
+});
         }
 
 

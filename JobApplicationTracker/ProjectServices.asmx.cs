@@ -1228,7 +1228,129 @@ public List<RecruiterSummary> GetRecruiters()
 
     return recruiters;
 }
+[WebMethod(EnableSession = true)]
+public string SetFollowUpDate(
 
+    string linkType,
+    int linkedRecordId,
+    string followUpDate)
+{
+    if (linkedRecordId <= 0)
+    {
+        return "Invalid record selected.";
+    }
+
+    try
+    {
+        using (MySqlConnection con =
+            new MySqlConnection(getConString()))
+        {
+            con.Open();
+
+            string query;
+
+            if (linkType == "Recruiter")
+            {
+                query =
+                    "UPDATE recruiters SET follow_up_reminder_date=@date WHERE recruiter_id=@id";
+            }
+            else
+            {
+                query =
+                    "UPDATE applications SET follow_up_date=@date WHERE application_id=@id";
+            }
+
+            using (MySqlCommand cmd = new MySqlCommand(query, con))
+            {
+                cmd.Parameters.AddWithValue(
+                    "@date",
+                    DateTime.Parse(followUpDate));
+
+                cmd.Parameters.AddWithValue(
+                    "@id",
+                    linkedRecordId);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        return "Follow-up saved successfully.";
+    }
+    catch (Exception e)
+    {
+        return "Unable to save follow-up. " + e.Message;
+    }
+}
+[WebMethod(EnableSession = true)]
+public List<ApplicationOption> GetApplications()
+{
+    List<ApplicationOption> applications =
+        new List<ApplicationOption>();
+
+    if (Session["username"] == null)
+    {
+        return applications;
+    }
+
+    try
+    {
+        using (MySqlConnection con =
+            new MySqlConnection(getConString()))
+        {
+            con.Open();
+
+            string query = @"
+                SELECT
+                    a.application_id,
+                    a.company_name,
+                    a.job_title
+                FROM applications a
+                INNER JOIN users u
+                    ON a.user_id = u.user_id
+                WHERE u.username = @username
+                  AND a.is_archived = 0
+                ORDER BY a.company_name, a.job_title;";
+
+            using (MySqlCommand cmd =
+                new MySqlCommand(query, con))
+            {
+                cmd.Parameters.AddWithValue(
+                    "@username",
+                    Session["username"].ToString()
+                );
+
+                using (MySqlDataReader reader =
+                    cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ApplicationOption application =
+                            new ApplicationOption();
+
+                        application.ApplicationId =
+                            Convert.ToInt32(
+                                reader["application_id"]
+                            );
+
+                        application.CompanyName =
+                            reader["company_name"].ToString();
+
+                        application.JobTitle =
+                            reader["job_title"].ToString();
+
+                        applications.Add(application);
+                    }
+                }
+            }
+        }
+    }
+    catch
+    {
+        return new List<ApplicationOption>();
+    }
+
+    return applications;
+}
 [WebMethod(EnableSession = true)]
 public List<SearchRecordSummary> GetSearchRecords()
 {
@@ -1426,6 +1548,14 @@ public class SearchRecordSummary
     public string SearchDate { get; set; }
 
     public string LastUpdated { get; set; }
+}
+public class ApplicationOption
+{
+    public int ApplicationId { get; set; }
+
+    public string CompanyName { get; set; }
+
+    public string JobTitle { get; set; }
 }
     }
 
