@@ -28,3 +28,16 @@ CREATE TABLE account_requests (
 
     PRIMARY KEY (request_id)
 );
+
+CREATE TABLE job_applications (
+    application_id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    company VARCHAR(100) NOT NULL,
+    job_title VARCHAR(100) NOT NULL,
+    date_applied DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Applied',
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+
+    PRIMARY KEY (application_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
