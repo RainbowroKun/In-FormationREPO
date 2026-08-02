@@ -1107,6 +1107,153 @@ namespace JobApplicationTracker
         return "Unable to save recruiter information. Error: " + e.Message;
     }
 }
+[WebMethod(EnableSession = true)]
+public List<RecruiterSummary> GetRecruiters()
+{
+    List<RecruiterSummary> recruiters =
+        new List<RecruiterSummary>();
+
+    if (Session["username"] == null)
+    {
+        return recruiters;
+    }
+
+    try
+    {
+        using (MySqlConnection con =
+            new MySqlConnection(getConString()))
+        {
+            con.Open();
+
+            string query = @"
+                SELECT
+                    r.recruiter_id,
+                    r.application_id,
+                    r.first_name,
+                    r.last_name,
+                    r.company_name,
+                    r.email,
+                    r.phone,
+                    r.follow_up_reminder_date,
+                    r.last_contact_date,
+                    r.notes,
+                    a.job_title
+                FROM recruiters r
+                INNER JOIN applications a
+                    ON r.application_id = a.application_id
+                INNER JOIN users u
+                    ON a.user_id = u.user_id
+                WHERE u.username = @username
+                ORDER BY r.updated_at DESC;";
+
+            using (MySqlCommand cmd =
+                new MySqlCommand(query, con))
+            {
+                cmd.Parameters.AddWithValue(
+                    "@username",
+                    Session["username"].ToString()
+                );
+
+                using (MySqlDataReader reader =
+                    cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        RecruiterSummary recruiter =
+                            new RecruiterSummary();
+
+                        recruiter.RecruiterId =
+                            Convert.ToInt32(
+                                reader["recruiter_id"]
+                            );
+
+                        recruiter.ApplicationId =
+                            Convert.ToInt32(
+                                reader["application_id"]
+                            );
+
+                        recruiter.FirstName =
+                            reader["first_name"].ToString();
+
+                        recruiter.LastName =
+                            reader["last_name"].ToString();
+
+                        recruiter.CompanyName =
+                            reader["company_name"].ToString();
+
+                        recruiter.Email =
+                            reader["email"].ToString();
+
+                        recruiter.Phone =
+                            reader["phone"] == DBNull.Value
+                                ? ""
+                                : reader["phone"].ToString();
+
+                        recruiter.JobTitle =
+                            reader["job_title"].ToString();
+
+                        recruiter.FollowUpReminderDate =
+                            reader["follow_up_reminder_date"]
+                                == DBNull.Value
+                                ? ""
+                                : Convert.ToDateTime(
+                                    reader[
+                                        "follow_up_reminder_date"
+                                    ]
+                                ).ToString("yyyy-MM-dd");
+
+                        recruiter.LastContactDate =
+                            reader["last_contact_date"]
+                                == DBNull.Value
+                                ? ""
+                                : Convert.ToDateTime(
+                                    reader["last_contact_date"]
+                                ).ToString("yyyy-MM-dd");
+
+                        recruiter.Notes =
+                            reader["notes"] == DBNull.Value
+                                ? ""
+                                : reader["notes"].ToString();
+
+                        recruiters.Add(recruiter);
+                    }
+                }
+            }
+        }
+    }
+    catch
+    {
+        return new List<RecruiterSummary>();
+    }
+
+    return recruiters;
+}
+
+
+public class RecruiterSummary
+{
+    public int RecruiterId { get; set; }
+
+    public int ApplicationId { get; set; }
+
+    public string FirstName { get; set; }
+
+    public string LastName { get; set; }
+
+    public string CompanyName { get; set; }
+
+    public string Email { get; set; }
+
+    public string Phone { get; set; }
+
+    public string JobTitle { get; set; }
+
+    public string FollowUpReminderDate { get; set; }
+
+    public string LastContactDate { get; set; }
+
+    public string Notes { get; set; }
+}
     }
 
 }
