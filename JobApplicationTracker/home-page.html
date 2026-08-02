@@ -1,0 +1,327 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="description"
+          content="Manage job applications, interviews, documents, reminders, and recruiter contacts with In Formation Jobs." />
+
+    <title>Home - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css">
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            LoadHomePage();
+        });
+
+        function LoadHomePage() {
+            // Hide everything before deciding what to show.
+            $("#signedOutArea").hide();
+            $("#signedInArea").hide();
+            $("#userOptions").hide();
+            $("#adminOptions").hide();
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetCurrentUserRole",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    var userInfo = msg.d;
+
+                    $("#welcomeMessage").text(userInfo);
+
+                    if (userInfo == "Not Logged In") {
+                        $("#signedOutArea").show();
+                        return;
+                    }
+
+                    $("#welcomeMessage").text(userInfo);
+
+                    $("#signedInArea").show();
+                    $("#userOptions").show();
+
+                    var userParts = userInfo.split("|");
+                    var role = userParts[1].trim().toLowerCase();
+
+                    if (role == "admin") {
+                        $("#adminOptions").show();
+                    }
+
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+
+                    ShowPageMessage("Unable to load your account information.","error");
+                    $("#signedOutArea").show()
+                }
+            });
+        }
+
+    </script>
+
+    <style>
+        #signedOutArea,
+        #userOptions,
+        #adminOptions {
+            display: none;
+        }
+
+        .linkDivider {
+            margin: 0 6px;
+        }
+
+        .homePage {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 36px 25px 50px;
+        }
+
+        .homeSection {
+            margin-bottom: 40px;
+        }
+
+            .homeSection h2 {
+                margin: 0 0 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #d7deea;
+                color: #1f3c88;
+            }
+
+        .cardGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .optionCard {
+            display: block;
+            padding: 22px;
+            border-radius: 8px;
+            background-color: white;
+            color: #1f2937;
+            text-decoration: none;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .optionCard:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+            }
+
+            .optionCard h3 {
+                margin: 0 0 8px;
+                color: #1f3c88;
+            }
+
+            .optionCard p {
+                margin: 0;
+                line-height: 1.4;
+            }
+
+        .comingSoon {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: #eef2f7;
+            color: #4b5563;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .adminCard {
+            border: 1px dashed #7c3aed;
+        }
+
+            .adminCard h3 {
+                color: #7c3aed;
+            }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div>
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage"></p>
+
+            <div id="signedOutArea">
+                <a class="accountLink"
+                    href="request-account.html">
+                    Create An Account
+                </a>
+
+                <span class="linkDivider">|</span>
+
+                <a class="accountLink"
+                    href="login.html">
+                    Log In
+                </a>
+            </div>
+
+            <div id="signedInArea">
+                <a class="accountLink"
+                    href="#"
+                    onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="homePage">
+
+        <p id="pageMessage"></p>
+
+        <!-- Options available to every logged-in user. -->
+        <section id="userOptions" class="homeSection">
+
+            <h2>My Job Search</h2>
+
+            <div class="cardGrid">
+
+                <a class="optionCard"
+                   href="add-application.html">
+                    <h3>Add Application</h3>
+
+                    <p>
+                        Record a company, job title, date applied,
+                        and current status.
+                    </p>
+
+                </a>
+
+                <a class="optionCard"
+                   href="view-applications.html">
+                    <h3>View Applications</h3>
+
+                    <p>
+                        Review, edit, archive, or delete saved job
+                        applications.
+                    </p>
+                </a>
+
+                <a class="optionCard"
+                   href="search.html">
+                    <h3>Search and Filter</h3>
+
+                    <p>
+                        Find applications by company, title, status,
+                        date, or location.
+                    </p>
+                </a>
+
+                <a class="optionCard"
+                   href="view-documents.html">
+                    <h3>Documents</h3>
+
+                    <p>
+                        Organize resumes and cover letters connected
+                        to specific applications.
+                    </p>
+                </a>
+
+                <a class="optionCard"
+                   href="reminder-interviews.html">
+                    <h3>Reminders and Interviews</h3>
+
+                    <p>
+                        Track deadlines, follow-ups, and scheduled
+                        interviews.
+                    </p>
+                </a>
+
+                <a class="optionCard"
+                   href="view-recruiters.html">
+                    <h3>Recruiter Contacts</h3>
+
+                    <p>
+                        Save recruiter names, contact information,
+                        and important notes.
+                    </p>
+                </a>
+
+                <a class="optionCard"
+                   href="chat.html">
+                    <h3>Chat</h3>
+
+                    <p>
+                        Chat with Administrator about concerns about the app
+                        or suggestions on new features to be added.
+                    </p>
+                </a>
+
+            </div>
+        </section>
+
+        <!-- This entire section only appears for administrators. -->
+        <section id="adminOptions" class="homeSection">
+
+            <h2>Administration</h2>
+
+            <div class="cardGrid">
+
+                <a class="optionCard adminCard"
+                   href="account-requests.html">
+                    <h3>Review Account Requests</h3>
+
+                    <p>
+                        Approve or reject pending requests for new
+                        user accounts.
+                    </p>
+
+                    <span class="comingSoon">Admin Only</span>
+                </a>
+
+                <a class="optionCard adminCard"
+                   href="#">
+                    <h3>Manage Users</h3>
+
+                    <p>
+                        View users and change account roles or active
+                        status.
+                    </p>
+
+                    <span class="comingSoon">Admin Only</span>
+                </a>
+
+                <a class="optionCard adminCard"
+                   href="#">
+                    <h3>Administrative Reports</h3>
+
+                    <p>
+                        Placeholder for system activity and account
+                        reports.
+                    </p>
+
+                    <span class="comingSoon">Admin Placeholder</span>
+                </a>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+</html>

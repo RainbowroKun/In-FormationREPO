@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Log In - In Formation Jobs</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css">
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            $("#loginForm").submit(
+                function (event) {
+
+                    event.preventDefault();
+                    LogIn();
+                }
+            );
+        });
+
+        function LogIn() {
+
+            var username = $("#username").val();
+            var password = $("#password").val();
+
+            var webMethod = "ProjectServices.asmx/LogIn";
+
+            var parameters = JSON.stringify({
+                username: username,
+                password: password
+            });
+
+            $.ajax({
+                type: "POST",
+                url: webMethod,
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    if (msg.d == "Success") {
+                        window.location.href = "home-page.html";
+                        return;
+                    }
+
+                    ShowPageMessage(msg.d, "error");
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+
+                    ShowPageMessage("Unable to connect to the server.", "error");
+                }
+
+            });
+
+        }
+    </script>
+
+</head>
+<body>
+
+    <main class="centeredPage">
+
+        <section class="centeredFormCard">
+
+            <h2>Log In</h2>
+
+            <p class="formDescription">
+                Log in to continue managing your job search.
+            </p>
+
+            <form id="loginForm">
+
+                <div class="formField">
+                    <label for="username">Username</label>
+                    <input type="text"
+                           id="username"
+                           maxlength="25"
+                           required />
+                </div>
+
+                <div class="formField">
+                    <label for="password">Password</label>
+                    <input type="password"
+                           id="password"
+                           maxlength="50"
+                           required />
+                </div>
+
+                    <button type="submit" id="loginButton" class="primaryButton">
+                        Log In
+                    </button>
+
+                    <p id="pageMessage"></p>
+
+                    <p class="formFooter">
+                        Don't have an account?
+                        <a href="request-account.html">Request an Account</a>
+                    </p>
+            </form>
+        </section>
+    </main>
+
+</body>
+</html>

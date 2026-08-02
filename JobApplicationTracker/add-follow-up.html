@@ -1,0 +1,563 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="description"
+          content="Add a follow-up date to an application or recruiter." />
+
+    <title>Add Follow-Up - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+    <script>
+        /*
+            Temporary application and recruiter options.
+
+            Your team can later replace these arrays with AJAX calls
+            that load the logged-in user's applications and recruiters.
+        */
+
+        var applications = [
+            {
+                ApplicationId: 1,
+                CompanyName: "Whatnot",
+                JobTitle: "Trust & Safety Agent"
+            },
+            {
+                ApplicationId: 2,
+                CompanyName: "Honeywell",
+                JobTitle: "Program Control Specialist"
+            },
+            {
+                ApplicationId: 3,
+                CompanyName: "Arizona Auditor General",
+                JobTitle: "IT Audit Intern"
+            }
+        ];
+
+        var recruiters = [
+            {
+                RecruiterId: 1,
+                FirstName: "Eric",
+                LastName: "Swartz",
+                CompanyName: "Whatnot"
+            },
+            {
+                RecruiterId: 2,
+                FirstName: "Vickie",
+                LastName: "Shen",
+                CompanyName: "Equitable Advisors"
+            },
+            {
+                RecruiterId: 3,
+                FirstName: "Sarah",
+                LastName: "Chen",
+                CompanyName: "Honeywell"
+            }
+        ];
+
+
+        $(document).ready(function () {
+
+            LoadAccountInformation();
+            LoadFollowUpOptions();
+
+            $("input[name='linkType']").on("change", UpdateLinkType);
+
+            $("#followUpForm").on("submit", function (event) {
+                event.preventDefault();
+                SaveFollowUp();
+            });
+
+            $("#clearFollowUpForm").on("click", ClearFollowUpForm);
+
+            UpdateLinkType();
+        });
+
+
+        /*
+            Adds the temporary applications and recruiters
+            to their corresponding dropdowns.
+        */
+
+        function LoadFollowUpOptions() {
+
+            applications.forEach(function (application) {
+                $("#applicationId").append(
+                    $("<option>")
+                        .val(application.ApplicationId)
+                        .text(application.CompanyName + " — " + application.JobTitle)
+                );
+            });
+
+            recruiters.forEach(function (recruiter) {
+
+                var recruiterName =
+                    (recruiter.FirstName + " " + recruiter.LastName).trim();
+
+                $("#recruiterId").append(
+                    $("<option>")
+                        .val(recruiter.RecruiterId)
+                        .text(recruiterName + " — " + recruiter.CompanyName)
+                );
+            });
+        }
+
+
+        /*
+            Shows only the dropdown matching the selected link type.
+
+            Disabling the hidden dropdown also prevents it from
+            interfering with the form's required-field validation.
+        */
+
+        function UpdateLinkType() {
+
+            var linkType =
+                $("input[name='linkType']:checked").val();
+
+            $(".linkTypeOption").removeClass("selectedOption");
+
+            $(".linkTypeOption[data-link-type='" + linkType + "']")
+                .addClass("selectedOption");
+
+            if (linkType == "Recruiter") {
+
+                $("#applicationField").hide();
+                $("#applicationId").prop("disabled", true);
+
+                $("#recruiterField").show();
+                $("#recruiterId").prop("disabled", false);
+
+                return;
+            }
+
+            $("#recruiterField").hide();
+            $("#recruiterId").prop("disabled", true);
+
+            $("#applicationField").show();
+            $("#applicationId").prop("disabled", false);
+        }
+
+
+        /*
+            Placeholder save behavior.
+
+            The backend version can update either:
+            applications.follow_up_date
+            recruiters.follow_up_date
+        */
+
+        function SaveFollowUp() {
+
+            var form =
+                document.getElementById("followUpForm");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            ClearPageMessage();
+
+            var linkType =
+                $("input[name='linkType']:checked").val();
+
+            var linkedRecordId =
+                linkType == "Recruiter"
+                    ? parseInt($("#recruiterId").val(), 10)
+                    : parseInt($("#applicationId").val(), 10);
+
+            var followUpDate =
+                $("#followUpDate").val();
+
+            var parameters = {
+                linkType: linkType,
+                linkedRecordId: linkedRecordId,
+                followUpDate: followUpDate
+            };
+
+            console.log(parameters);
+
+            /*
+                Your team can replace the placeholder message
+                with an AJAX call such as:
+
+                ProjectServices.asmx/SetFollowUpDate
+            */
+
+            ShowPageMessage(
+                "Follow-up information is ready to be connected to the backend.",
+                "success"
+            );
+        }
+
+
+        /*
+            Restores the form to its original state.
+        */
+
+        function ClearFollowUpForm() {
+
+            document
+                .getElementById("followUpForm")
+                .reset();
+
+            $("#linkApplication").prop("checked", true);
+            $("#applicationId").val("");
+            $("#recruiterId").val("");
+            $("#followUpDate").val("");
+
+            ClearPageMessage();
+            UpdateLinkType();
+        }
+    </script>
+
+    <style>
+        /*
+            Add Follow-Up page heading.
+
+            Page width and breadcrumb styling come from site.css.
+        */
+
+        .pageHeading {
+            margin-bottom: 22px;
+        }
+
+            .pageHeading h2 {
+                margin: 0 0 8px;
+                color: #0f172a;
+                font-size: 36px;
+            }
+
+            .pageHeading p {
+                margin: 0;
+                color: #64748b;
+                font-size: 16px;
+            }
+
+
+        /*
+            Main follow-up form card.
+        */
+
+        .followUpCard {
+            max-width: 1020px;
+            margin: 0 auto;
+            padding: 28px;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            background-color: white;
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
+        }
+
+
+        /*
+            Application or recruiter selector.
+        */
+
+        .linkTypeFieldset {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+
+            .linkTypeFieldset legend {
+                margin-bottom: 10px;
+                color: #0f172a;
+                font-size: 14px;
+                font-weight: bold;
+            }
+
+        .linkTypeGrid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .linkTypeOption {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 58px;
+            padding: 14px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: white;
+            color: #334155;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+            .linkTypeOption:hover {
+                background-color: #f8fafc;
+            }
+
+            .linkTypeOption input[type="radio"] {
+                width: auto;
+                height: auto;
+                margin: 0;
+            }
+
+        .selectedOption {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            color: #1556d8;
+        }
+
+
+        /*
+            Linked record and follow-up date fields.
+        */
+
+        .targetField {
+            margin-top: 22px;
+        }
+
+        .followUpDateField {
+            max-width: 360px;
+            margin-top: 18px;
+        }
+
+
+        /*
+            Form footer buttons.
+        */
+
+        .formActions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 24px -28px -28px;
+            padding: 18px 28px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .backToRemindersButton {
+            text-decoration: none;
+        }
+
+        .rightFormActions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+            .rightFormActions .secondaryButton {
+                min-width: 110px;
+            }
+
+            .rightFormActions .primaryButton {
+                min-width: 150px;
+            }
+    </style>
+</head>
+
+<body>
+
+    <header>
+
+        <div>
+            <h1>In Formation Jobs</h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <a href="reminders-interviews.html">
+                Reminders &amp; Interviews
+            </a>
+
+            <span>&gt;</span>
+
+            <span>
+                Add Follow-Up
+            </span>
+
+        </nav>
+
+        <div class="pageHeading">
+
+            <h2>
+                Add Follow-Up
+            </h2>
+
+            <p>
+                Create a follow-up and connect it to an existing
+                application or recruiter.
+            </p>
+
+        </div>
+
+        <main class="followUpCard">
+
+            <form id="followUpForm">
+
+                <fieldset class="linkTypeFieldset">
+
+                    <legend>
+                        Link To
+                        <span class="requiredMark">*</span>
+                    </legend>
+
+                    <div class="linkTypeGrid">
+
+                        <label class="linkTypeOption"
+                               data-link-type="Application">
+
+                            <input type="radio"
+                                   id="linkApplication"
+                                   name="linkType"
+                                   value="Application"
+                                   checked />
+
+                            <span>
+                                Application
+                            </span>
+
+                        </label>
+
+                        <label class="linkTypeOption"
+                               data-link-type="Recruiter">
+
+                            <input type="radio"
+                                   id="linkRecruiter"
+                                   name="linkType"
+                                   value="Recruiter" />
+
+                            <span>
+                                Recruiter
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                </fieldset>
+
+                <div id="applicationField"
+                     class="formField targetField">
+
+                    <label for="applicationId">
+                        Linked Application
+                        <span class="requiredMark">*</span>
+                    </label>
+
+                    <select id="applicationId"
+                            required>
+
+                        <option value=""
+                                selected
+                                disabled>
+                            Select an application
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div id="recruiterField"
+                     class="formField targetField">
+
+                    <label for="recruiterId">
+                        Linked Recruiter
+                        <span class="requiredMark">*</span>
+                    </label>
+
+                    <select id="recruiterId"
+                            required>
+
+                        <option value=""
+                                selected
+                                disabled>
+                            Select a recruiter
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="formField followUpDateField">
+
+                    <label for="followUpDate">
+                        Follow-Up Date
+                        <span class="requiredMark">*</span>
+                    </label>
+
+                    <input type="date"
+                           id="followUpDate"
+                           required />
+
+                </div>
+
+                <p id="pageMessage"></p>
+
+                <div class="formActions">
+
+                    <a class="secondaryButton backToRemindersButton"
+                       href="reminder-interviews.html">
+                        Back to Reminders
+                    </a>
+
+                    <div class="rightFormActions">
+
+                        <button type="button"
+                                id="clearFollowUpForm"
+                                class="secondaryButton">
+                            Clear
+                        </button>
+
+                        <button type="submit"
+                                id="saveFollowUpButton"
+                                class="primaryButton">
+                            Save Follow-Up
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </main>
+
+    </div>
+
+</body>
+</html>
