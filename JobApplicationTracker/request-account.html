@@ -10,105 +10,79 @@
     <script type="text/javascript">
 
         $(document).ready(function () {
-
-            $("#accountRequestForm").submit(
-                function (event) {
-
-                    event.preventDefault();
-                    SubmitAccountRequest();
-                }
-            );
-        });
-
-        $("#accountRequestForm").submit(
-            function (event) {
+            $("#accountRequestForm").on("submit", function (event) {
                 event.preventDefault();
                 SubmitAccountRequest();
-            }
+            });
         });
 
         function CheckPasswordLength() {
-
             var password = $("#password").val();
 
             if (password.length > 0 && password.length < 8) {
-                ShowPageMessage("Password must be between 8 and 50 characters.", "error")
-            }
-            else {
-                return false);
+                ShowPageMessage("Password must be between 8 and 50 characters.", "error");
+                return false;
             }
 
             ClearPageMessage();
-            return true
+            return true;
         }
 
         function CheckPasswordsMatch() {
-
             var password = $("#password").val();
             var confirmPassword = $("#confirmPassword").val();
 
-            if (confirmPassword.length > 0 &&
-                password != confirmPassword) {
-
-                ShowPageMessage(
-                    "Passwords do not match.", "error"
-                );
-
+            if (confirmPassword.length > 0 && password != confirmPassword) {
+                ShowPageMessage("Passwords do not match.", "error");
                 return false;
-
-                }
+            }
 
             ClearPageMessage();
             return true;
         }
 
         function SubmitAccountRequest() {
+            var form = document.getElementById("accountRequestForm");
 
-            var firstName = $("#firstName").val().trim();
-            var lastName = $("#lastName").val().trim();
-            var email = $("#email").val().trim();
-            var username = $("#username").val().trim();
-            var password = $("#password").val();
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
 
-            var webMethod = "ProjectServices.asmx/SubmitAccountRequest";
+            if (!CheckPasswordLength() || !CheckPasswordsMatch()) {
+                return;
+            }
+
+            ClearPageMessage();
 
             var parameters = JSON.stringify({
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-                username: username,
-                password: password
+                firstName: $("#firstName").val().trim(),
+                lastName: $("#lastName").val().trim(),
+                email: $("#email").val().trim(),
+                username: $("#username").val().trim(),
+                password: $("#password").val()
             });
 
             $.ajax({
                 type: "POST",
-                url: webMethod,
+                url: "ProjectServices.asmx/SubmitAccountRequest",
                 data: parameters,
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
 
                 success: function (msg) {
-
                     if (msg.d == "Success") {
-                        ShowPageMessage(
-                            "Thank you for submitting your account request", "success""
-                        );
-
+                        ShowPageMessage("Thank you for submitting your account request", "success");
                         form.reset();
                     }
                     else {
-                        ShowPageMessage(
-                            msg.d, "error"
-                        );
+                        ShowPageMessage(msg.d, "error");
                     }
                 },
 
                 error: function (xhr) {
-
                     console.log(xhr.responseText);
-
-                    ShowPageMessage(
-                        "Unable to connect to the server.", "error");
+                    ShowPageMessage("Unable to connect to the server.", "error");
                 }
             });
         }
@@ -189,7 +163,7 @@
                 </div>
 
 
-                    <button type="submit" id="submitRequestButton", class="primaryButton">Submit Request</button>
+                    <button type="submit" id="submitRequestButton" class="primaryButton">Submit Request</button>
 
                     <p id="pageMessage"></p>
 

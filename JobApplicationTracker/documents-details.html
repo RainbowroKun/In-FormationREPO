@@ -2,9 +2,385 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <meta name="description" content="View a document and the applications linked to it." />
+    <title>Document Details - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+    <script>
+        var documentId = 0;
+
+        $(document).ready(function () {
+            LoadAccountInformation();
+            documentId = GetDocumentIdFromUrl();
+
+            if (documentId <= 0) {
+                ShowPageMessage("A valid document was not selected.", "error");
+                return;
+            }
+
+            $("#downloadDocumentButton").attr(
+                "href",
+                "DownloadDocument.ashx?documentId=" + documentId
+            );
+
+            LoadDocumentDetails();
+        });
+
+        function GetDocumentIdFromUrl() {
+            var parameters = new URLSearchParams(window.location.search);
+            var parsedValue = parseInt(parameters.get("documentId"), 10);
+            return isNaN(parsedValue) ? 0 : parsedValue;
+        }
+
+        function LoadDocumentDetails() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetDocumentDetails",
+                data: JSON.stringify({ documentId: documentId }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (!msg.d) {
+                        ShowPageMessage("The selected document could not be found.", "error");
+                        return;
+                    }
+
+                    DisplayDocument(msg.d);
+                    DisplayApplications(msg.d.Applications || []);
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load document details.", "error");
+                }
+            });
+        }
+
+        function DisplayDocument(documentItem) {
+            $("#documentFileName").text(documentItem.FileName || "—");
+            $("#documentType").text(documentItem.DocumentType || "—");
+            $("#contentType").text(documentItem.ContentType || "—");
+            $("#fileSize").text(FormatFileSize(documentItem.FileSize));
+            $("#uploadedAt").text(FormatDate(documentItem.UploadedAt));
+            $("#documentNotes").text(documentItem.Notes || "No notes were added.");
+            $("#pageTitle").text(documentItem.FileName || "Document Details");
+        }
+
+        function DisplayApplications(applications) {
+            $("#applicationCount").text(applications.length);
+
+            var tableBody = $("#applicationsTableBody");
+            tableBody.empty();
+
+            if (applications.length == 0) {
+                tableBody.append(
+                    "<tr><td colspan='7' class='emptyTableMessage'>" +
+                    "This document is not linked to an application." +
+                    "</td></tr>"
+                );
+                return;
+            }
+
+            applications.forEach(function (application) {
+                var status = application.IsArchived
+                    ? "Archived"
+                    : (application.ApplicationStatus || "Applied");
+
+                var row =
+                    "<tr>" +
+                    "<td><strong>" + EscapeHtml(application.CompanyName) + "</strong></td>" +
+                    "<td>" + EscapeHtml(application.JobTitle) + "</td>" +
+                    "<td>" + FormatDate(application.DateApplied) + "</td>" +
+                    "<td><span class='statusBadge'>" + EscapeHtml(status) + "</span></td>" +
+                    "<td>" + EscapeHtml(application.ApplicationNotes || "—") + "</td>" +
+                    "<td>" + FormatDate(application.LinkedAt) + "</td>" +
+                    "<td><a class='tableLink' href='edit-application.html?applicationId=" +
+                        application.ApplicationId + "'>Open Application</a></td>" +
+                    "</tr>";
+
+                tableBody.append(row);
+            });
+        }
+
+        function FormatFileSize(fileSize) {
+            var size = Number(fileSize);
+
+            if (!size || size < 0) {
+                return "—";
+            }
+
+            if (size < 1024) {
+                return size + " bytes";
+            }
+
+            if (size < 1024 * 1024) {
+                return Math.round(size / 1024) + " KB";
+            }
+
+            return (size / (1024 * 1024)).toFixed(2) + " MB";
+        }
+    </script>
+
+    <style>
+        .pageWrapper {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 28px 24px 50px;
+        }
+
+        .pageNav,
+        .pageHeadingRow,
+        .documentSummaryGrid,
+        .rowActions {
+            display: flex;
+        }
+
+        .pageNav {
+            gap: 8px;
+            margin-bottom: 18px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .pageNav a,
+        .tableLink {
+            color: #1556d8;
+            text-decoration: none;
+        }
+
+        .pageNav a:hover,
+        .tableLink:hover {
+            text-decoration: underline;
+        }
+
+        .pageHeadingRow {
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 22px;
+        }
+
+        .pageHeading h2 {
+            margin: 0 0 6px;
+            color: #0f172a;
+            font-size: 32px;
+        }
+
+        .pageHeading p {
+            margin: 0;
+            color: #64748b;
+        }
+
+        .rowActions {
+            gap: 12px;
+            align-items: center;
+        }
+
+        .detailsCard {
+            margin-bottom: 20px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        }
+
+        .detailsCard h3 {
+            margin: 0 0 18px;
+            color: #0f172a;
+        }
+
+        .documentSummaryGrid {
+            flex-wrap: wrap;
+            gap: 24px 40px;
+        }
+
+        .summaryField {
+            min-width: 180px;
+            flex: 1;
+        }
+
+        .summaryField label {
+            display: block;
+            margin-bottom: 7px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .summaryField p {
+            margin: 0;
+            color: #1e293b;
+            overflow-wrap: anywhere;
+        }
+
+        .notesField {
+            flex-basis: 100%;
+        }
+
+        .applicationCount {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 12px;
+        }
+
+        .tableWrapper {
+            overflow-x: auto;
+        }
+
+        .applicationsTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .applicationsTable th,
+        .applicationsTable td {
+            padding: 13px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .applicationsTable th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .applicationsTable td {
+            color: #334155;
+            font-size: 13px;
+        }
+
+        .statusBadge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 5px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .emptyTableMessage {
+            padding: 34px !important;
+            color: #64748b !important;
+            text-align: center !important;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <div>
+            <h1>In Formation Jobs</h1>
+            <p>Keep your job search organized and moving forward.</p>
+        </div>
 
+        <div class="accountArea">
+            <p id="welcomeMessage">Loading account...</p>
+            <div id="signedInArea">
+                <a class="accountLink" href="#" onclick="LogOut(); return false;">Log Out</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="pageWrapper">
+        <nav class="pageNav">
+            <a href="home-page.html">Home</a>
+            <span>&gt;</span>
+            <a href="view-documents.html">Documents</a>
+            <span>&gt;</span>
+            <span>Details</span>
+        </nav>
+
+        <div class="pageHeadingRow">
+            <div class="pageHeading">
+                <h2 id="pageTitle">Document Details</h2>
+                <p>See the file information and every application linked to it.</p>
+            </div>
+
+            <div class="rowActions">
+                <a class="secondaryButton" href="view-documents.html">Back to Documents</a>
+                <a class="primaryButton" id="downloadDocumentButton" href="#">Download</a>
+            </div>
+        </div>
+
+        <p id="pageMessage"></p>
+
+        <section class="detailsCard">
+            <h3>Document Information</h3>
+
+            <div class="documentSummaryGrid">
+                <div class="summaryField">
+                    <label>File Name</label>
+                    <p id="documentFileName">Loading...</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>Document Type</label>
+                    <p id="documentType">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>File Type</label>
+                    <p id="contentType">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>File Size</label>
+                    <p id="fileSize">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>Uploaded</label>
+                    <p id="uploadedAt">—</p>
+                </div>
+
+                <div class="summaryField notesField">
+                    <label>Notes</label>
+                    <p id="documentNotes">—</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="detailsCard">
+            <h3>
+                Linked Applications
+                <span class="applicationCount" id="applicationCount">0</span>
+            </h3>
+
+            <div class="tableWrapper">
+                <table class="applicationsTable">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Job Title</th>
+                            <th>Date Applied</th>
+                            <th>Status</th>
+                            <th>Link Notes</th>
+                            <th>Linked</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="applicationsTableBody">
+                        <tr>
+                            <td colspan="7" class="emptyTableMessage">Loading applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
 </body>
 </html>

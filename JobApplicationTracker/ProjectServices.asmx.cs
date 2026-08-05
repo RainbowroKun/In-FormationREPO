@@ -1443,8 +1443,8 @@ public class ApplicationEditDetails
 
 
             using (MySqlConnection con = new MySqlConnection(getConString()))
-                {
-                    con.Open();
+            {
+                con.Open();
 
                 using (MySqlTransaction transaction = con.BeginTransaction())
                 {
@@ -1468,7 +1468,6 @@ public class ApplicationEditDetails
                         if (applicationCount == 0)
                         {
                             transaction.Rollback();
-
                             return "Application was not found.";
                         }
 
@@ -1485,14 +1484,16 @@ public class ApplicationEditDetails
                             documentCommand.Parameters.AddWithValue("@userId", userId);
                             documentCommand.Parameters.AddWithValue("@documentType", documentType.Trim());
                             documentCommand.Parameters.AddWithValue("@fileName", fileName.Trim());
-                            documentCommand.Parameters.AddWithValue("@contentType",
-                                string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType.Trim());
+                            documentCommand.Parameters.AddWithValue(
+                                "@contentType",
+                                string.IsNullOrWhiteSpace(contentType)
+                                    ? "application/octet-stream"
+                                    : contentType.Trim());
                             documentCommand.Parameters.AddWithValue("@fileSize", documentBytes.Length);
                             documentCommand.Parameters.AddWithValue("@fileData", documentBytes);
                             documentCommand.Parameters.AddWithValue("@documentNotes", EmptyToNull(documentNotes));
 
                             documentCommand.ExecuteNonQuery();
-
                             documentId = Convert.ToInt32(documentCommand.LastInsertedId);
                         }
 
@@ -1507,634 +1508,801 @@ public class ApplicationEditDetails
                             linkCommand.Parameters.AddWithValue("@applicationId", applicationId);
                             linkCommand.Parameters.AddWithValue("@documentId", documentId);
                             linkCommand.Parameters.AddWithValue("@applicationNotes", EmptyToNull(applicationNotes));
-
                             linkCommand.ExecuteNonQuery();
                         }
 
-        return "Recruiter information saved successfully.";
-    }
-    catch (FormatException)
-    {
-        return "One or more dates were entered incorrectly.";
-    }
-    catch (Exception e)
-    {
-        return "Unable to save recruiter information. Error: " + e.Message;
-    }
-}
-[WebMethod(EnableSession = true)]
-public List<RecruiterSummary> GetRecruiters()
-{
-    List<RecruiterSummary> recruiters =
-        new List<RecruiterSummary>();
-
-    if (Session["username"] == null)
-    {
-        return recruiters;
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query = @"
-                SELECT
-                    r.recruiter_id,
-                    r.application_id,
-                    r.first_name,
-                    r.last_name,
-                    r.company_name,
-                    r.email,
-                    r.phone,
-                    r.follow_up_reminder_date,
-                    r.last_contact_date,
-                    r.notes,
-                    a.job_title
-                FROM recruiters r
-                INNER JOIN applications a
-                    ON r.application_id = a.application_id
-                INNER JOIN users u
-                    ON a.user_id = u.user_id
-                WHERE u.username = @username
-                ORDER BY r.updated_at DESC;";
-
-            using (MySqlCommand cmd =
-                new MySqlCommand(query, con))
-            {
-                cmd.Parameters.AddWithValue(
-                    "@username",
-                    Session["username"].ToString()
-                );
-
-                using (MySqlDataReader reader =
-                    cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        RecruiterSummary recruiter =
-                            new RecruiterSummary();
-
-                        recruiter.RecruiterId =
-                            Convert.ToInt32(
-                                reader["recruiter_id"]
-                            );
-
-                        recruiter.ApplicationId =
-                            Convert.ToInt32(
-                                reader["application_id"]
-                            );
-
-                        recruiter.FirstName =
-                            reader["first_name"].ToString();
-
-                        recruiter.LastName =
-                            reader["last_name"].ToString();
-
-                        recruiter.CompanyName =
-                            reader["company_name"].ToString();
-
-                        recruiter.Email =
-                            reader["email"].ToString();
-
-                        recruiter.Phone =
-                            reader["phone"] == DBNull.Value
-                                ? ""
-                                : reader["phone"].ToString();
-
-                        recruiter.JobTitle =
-                            reader["job_title"].ToString();
-
-                        recruiter.FollowUpReminderDate =
-                            reader["follow_up_reminder_date"]
-                                == DBNull.Value
-                                ? ""
-                                : Convert.ToDateTime(
-                                    reader[
-                                        "follow_up_reminder_date"
-                                    ]
-                                ).ToString("yyyy-MM-dd");
-
-                        recruiter.LastContactDate =
-                            reader["last_contact_date"]
-                                == DBNull.Value
-                                ? ""
-                                : Convert.ToDateTime(
-                                    reader["last_contact_date"]
-                                ).ToString("yyyy-MM-dd");
-
-                        recruiter.Notes =
-                            reader["notes"] == DBNull.Value
-                                ? ""
-                                : reader["notes"].ToString();
-
-                        recruiters.Add(recruiter);
-                    }
-                }
-            }
-        }
-    }
-    catch
-    {
-        return new List<RecruiterSummary>();
-    }
-
-    return recruiters;
-}
-[WebMethod(EnableSession = true)]
-public string SetFollowUpDate(
-
-    string linkType,
-    int linkedRecordId,
-    string followUpDate)
-{
-    if (linkedRecordId <= 0)
-    {
-        return "Invalid record selected.";
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query;
-
-            if (linkType == "Recruiter")
-            {
-                query =
-                    "UPDATE recruiters SET follow_up_reminder_date=@date WHERE recruiter_id=@id";
-            }
-            else
-            {
-                query =
-                    "UPDATE applications SET follow_up_date=@date WHERE application_id=@id";
-            }
-
-            using (MySqlCommand cmd = new MySqlCommand(query, con))
-            {
-                cmd.Parameters.AddWithValue(
-                    "@date",
-                    DateTime.Parse(followUpDate));
-
-                cmd.Parameters.AddWithValue(
-                    "@id",
-                    linkedRecordId);
-
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        return "Follow-up saved successfully.";
-    }
-    catch (Exception e)
-    {
-        return "Unable to save follow-up. " + e.Message;
-    }
-}
-[WebMethod(EnableSession = true)]
-public List<ApplicationOption> GetApplications()
-{
-    List<ApplicationOption> applications =
-        new List<ApplicationOption>();
-
-    if (Session["username"] == null)
-    {
-        return applications;
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query = @"
-                SELECT
-                    a.application_id,
-                    a.company_name,
-                    a.job_title
-                FROM applications a
-                INNER JOIN users u
-                    ON a.user_id = u.user_id
-                WHERE u.username = @username
-                  AND a.is_archived = 0
-                ORDER BY a.company_name, a.job_title;";
-
-            using (MySqlCommand cmd =
-                new MySqlCommand(query, con))
-            {
-                cmd.Parameters.AddWithValue(
-                    "@username",
-                    Session["username"].ToString()
-                );
-
-                using (MySqlDataReader reader =
-                    cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        ApplicationOption application =
-                            new ApplicationOption();
-
-                        application.ApplicationId =
-                            Convert.ToInt32(
-                                reader["application_id"]
-                            );
-
-                        application.CompanyName =
-                            reader["company_name"].ToString();
-
-                        application.JobTitle =
-                            reader["job_title"].ToString();
-
-                        applications.Add(application);
-                    }
-                }
-            }
-        }
-    }
-    catch
-    {
-        return new List<ApplicationOption>();
-    }
-
-    return applications;
-}
-[WebMethod(EnableSession = true)]
-public List<SearchRecordSummary> GetSearchRecords()
-{
-    List<SearchRecordSummary> records =
-        new List<SearchRecordSummary>();
-
-    if (Session["username"] == null)
-    {
-        return records;
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query = @"
-                SELECT
-                    'Application' AS record_type,
-                    a.application_id AS record_id,
-                    a.job_title AS title,
-                    a.company_name,
-                    a.application_id AS related_application_id,
-                    a.job_title AS related_application_name,
-                    a.notes,
-                    a.application_status AS record_status,
-                    DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS search_date,
-                    DATE_FORMAT(a.updated_at, '%Y-%m-%d') AS last_updated
-                FROM applications a
-                INNER JOIN users u
-                    ON a.user_id = u.user_id
-                WHERE u.username = @username
-
-                UNION ALL
-
-                SELECT
-                    'Recruiter' AS record_type,
-                    r.recruiter_id AS record_id,
-                    CONCAT(r.first_name, ' ', r.last_name) AS title,
-                    r.company_name,
-                    a.application_id AS related_application_id,
-                    a.job_title AS related_application_name,
-                    r.notes,
-                    '' AS record_status,
-                    COALESCE(
-                        DATE_FORMAT(r.last_contact_date, '%Y-%m-%d'),
-                        DATE_FORMAT(r.follow_up_reminder_date, '%Y-%m-%d'),
-                        DATE_FORMAT(r.updated_at, '%Y-%m-%d')
-                    ) AS search_date,
-                    DATE_FORMAT(r.updated_at, '%Y-%m-%d') AS last_updated
-                FROM recruiters r
-                INNER JOIN applications a
-                    ON r.application_id = a.application_id
-                INNER JOIN users u
-                    ON a.user_id = u.user_id
-                WHERE u.username = @username
-
-                UNION ALL
-
-                SELECT
-                    'Document' AS record_type,
-                    d.document_id AS record_id,
-                    d.file_name AS title,
-                    a.company_name,
-                    a.application_id AS related_application_id,
-                    a.job_title AS related_application_name,
-                    d.notes,
-                    '' AS record_status,
-                    DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS search_date,
-                    DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS last_updated
-                FROM application_documents d
-                INNER JOIN applications a
-                    ON d.application_id = a.application_id
-                INNER JOIN users u
-                    ON a.user_id = u.user_id
-                WHERE u.username = @username
-
-                ORDER BY last_updated DESC;";
-
-            using (MySqlCommand cmd =
-                new MySqlCommand(query, con))
-            {
-                cmd.Parameters.AddWithValue(
-                    "@username",
-                    Session["username"].ToString()
-                );
-
-                using (MySqlDataReader reader =
-                    cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        SearchRecordSummary record =
-                            new SearchRecordSummary();
-
-                        record.RecordType =
-                            reader["record_type"].ToString();
-
-                        record.RecordId =
-                            Convert.ToInt32(reader["record_id"]);
-
-                        record.Title =
-                            reader["title"].ToString();
-
-                        record.CompanyName =
-                            reader["company_name"].ToString();
-
-                        record.RelatedApplicationId =
-                            Convert.ToInt32(
-                                reader["related_application_id"]
-                            );
-
-                        record.RelatedApplicationName =
-                            reader["related_application_name"]
-                                .ToString();
-
-                        record.Notes =
-                            reader["notes"] == DBNull.Value
-                                ? ""
-                                : reader["notes"].ToString();
-
-                        record.Status =
-                            reader["record_status"] == DBNull.Value
-                                ? ""
-                                : reader["record_status"].ToString();
-
-                        record.SearchDate =
-                            reader["search_date"] == DBNull.Value
-                                ? ""
-                                : reader["search_date"].ToString();
-
-                        record.LastUpdated =
-                            reader["last_updated"] == DBNull.Value
-                                ? ""
-                                : reader["last_updated"].ToString();
-
-                        records.Add(record);
-                    }
-                }
-            }
-        }
-    }
-    catch
-    {
-        return new List<SearchRecordSummary>();
-    }
-
-    return records;
-}
-
-public class RecruiterSummary
-{
-    public int RecruiterId { get; set; }
-
-    public int ApplicationId { get; set; }
-
-    public string FirstName { get; set; }
-
-    public string LastName { get; set; }
-
-    public string CompanyName { get; set; }
-
-    public string Email { get; set; }
-
-    public string Phone { get; set; }
-
-    public string JobTitle { get; set; }
-
-    public string FollowUpReminderDate { get; set; }
-
-    public string LastContactDate { get; set; }
-
-    public string Notes { get; set; }
-}
-public class SearchRecordSummary
-{
-    public string RecordType { get; set; }
-
-    public int RecordId { get; set; }
-
-    public string Title { get; set; }
-
-    public string CompanyName { get; set; }
-
-    public int RelatedApplicationId { get; set; }
-
-    public string RelatedApplicationName { get; set; }
-
-    public string Notes { get; set; }
-
-    public string Status { get; set; }
-
-    public string SearchDate { get; set; }
-
-    public string LastUpdated { get; set; }
-}
-public class ApplicationOption
-{
-    public int ApplicationId { get; set; }
-
-    public string CompanyName { get; set; }
-
-    public string JobTitle { get; set; }
-}
-    }
                         transaction.Commit();
-
                         return "Success";
                     }
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-
                         return "Unable to upload document. Error: " + ex.Message;
                     }
                 }
             }
         }
 
+        [WebMethod(EnableSession = true)]
+        public List<DocumentSummary> GetDocuments()
+        {
+            List<DocumentSummary> documents = new List<DocumentSummary>();
+
+            if (Session["userId"] == null)
+            {
+                return documents;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        d.document_id,
+                        d.document_type,
+                        d.file_name,
+                        d.file_size,
+                        d.notes,
+                        d.uploaded_at,
+                        COUNT(ad.application_id) AS application_count
+                    FROM documents d
+                    LEFT JOIN application_documents ad
+                        ON d.document_id = ad.document_id
+                    WHERE d.user_id = @userId
+                    GROUP BY
+                        d.document_id,
+                        d.document_type,
+                        d.file_name,
+                        d.file_size,
+                        d.notes,
+                        d.uploaded_at
+                    ORDER BY d.uploaded_at DESC, d.document_id DESC;";
+
+                using (MySqlCommand command = new MySqlCommand(query, con))
+                {
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            DocumentSummary document = new DocumentSummary();
+                            document.DocumentId = Convert.ToInt32(reader["document_id"]);
+                            document.DocumentType = Convert.ToString(reader["document_type"]);
+                            document.FileName = Convert.ToString(reader["file_name"]);
+                            document.FileSize = Convert.ToInt32(reader["file_size"]);
+                            document.Notes = reader["notes"] == DBNull.Value
+                                ? ""
+                                : Convert.ToString(reader["notes"]);
+                            document.UploadedAt = Convert.ToDateTime(reader["uploaded_at"])
+                                .ToString("yyyy-MM-dd HH:mm:ss");
+                            document.ApplicationCount = Convert.ToInt32(reader["application_count"]);
+                            documents.Add(document);
+                        }
+                    }
+                }
+            }
+
+            return documents;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public DocumentDetailsResult GetDocumentDetails(int documentId)
+        {
+            if (Session["userId"] == null || documentId <= 0)
+            {
+                return null;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+            DocumentDetailsResult result = null;
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string documentQuery = @"
+                    SELECT
+                        document_id,
+                        document_type,
+                        file_name,
+                        content_type,
+                        file_size,
+                        notes,
+                        uploaded_at
+                    FROM documents
+                    WHERE document_id = @documentId
+                      AND user_id = @userId;";
+
+                using (MySqlCommand command = new MySqlCommand(documentQuery, con))
+                {
+                    command.Parameters.AddWithValue("@documentId", documentId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            return null;
+                        }
+
+                        result = new DocumentDetailsResult();
+                        result.DocumentId = Convert.ToInt32(reader["document_id"]);
+                        result.DocumentType = Convert.ToString(reader["document_type"]);
+                        result.FileName = Convert.ToString(reader["file_name"]);
+                        result.ContentType = Convert.ToString(reader["content_type"]);
+                        result.FileSize = Convert.ToInt32(reader["file_size"]);
+                        result.Notes = reader["notes"] == DBNull.Value
+                            ? ""
+                            : Convert.ToString(reader["notes"]);
+                        result.UploadedAt = Convert.ToDateTime(reader["uploaded_at"])
+                            .ToString("yyyy-MM-dd HH:mm:ss");
+                        result.Applications = new List<DocumentApplicationSummary>();
+                    }
+                }
+
+                string applicationsQuery = @"
+                    SELECT
+                        a.application_id,
+                        a.company_name,
+                        a.job_title,
+                        a.application_status,
+                        a.date_applied,
+                        a.is_archived,
+                        ad.application_notes,
+                        ad.linked_at
+                    FROM application_documents ad
+                    INNER JOIN applications a
+                        ON ad.application_id = a.application_id
+                    WHERE ad.document_id = @documentId
+                      AND a.user_id = @userId
+                    ORDER BY a.date_applied DESC, a.application_id DESC;";
+
+                using (MySqlCommand command = new MySqlCommand(applicationsQuery, con))
+                {
+                    command.Parameters.AddWithValue("@documentId", documentId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            DocumentApplicationSummary application =
+                                new DocumentApplicationSummary();
+
+                            application.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                            application.CompanyName = Convert.ToString(reader["company_name"]);
+                            application.JobTitle = Convert.ToString(reader["job_title"]);
+                            application.ApplicationStatus = Convert.ToString(reader["application_status"]);
+                            application.DateApplied = Convert.ToDateTime(reader["date_applied"])
+                                .ToString("yyyy-MM-dd");
+                            application.IsArchived = Convert.ToBoolean(reader["is_archived"]);
+                            application.ApplicationNotes = reader["application_notes"] == DBNull.Value
+                                ? ""
+                                : Convert.ToString(reader["application_notes"]);
+                            application.LinkedAt = Convert.ToDateTime(reader["linked_at"])
+                                .ToString("yyyy-MM-dd HH:mm:ss");
+
+                            result.Applications.Add(application);
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+        ////////////////////////////////////////////////////////////////////////
+        /// Interview Functions
+        ////////////////////////////////////////////////////////////////////////
+
+        [WebMethod(EnableSession = true)]
+        public List<InterviewSummary> GetApplicationInterviews(int applicationId)
+        {
+            List<InterviewSummary> interviews = new List<InterviewSummary>();
+
+            if (Session["userId"] == null || applicationId <= 0)
+            {
+                return interviews;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        i.interview_id,
+                        i.application_id,
+                        i.recruiter_id,
+                        i.interview_title,
+                        i.interview_type,
+                        i.interview_date,
+                        i.interviewer_name,
+                        i.location_or_link,
+                        i.notes,
+                        i.interview_status,
+                        TRIM(CONCAT_WS(' ', r.first_name, r.last_name)) AS recruiter_name
+                    FROM interviews i
+                    INNER JOIN applications a
+                        ON i.application_id = a.application_id
+                    LEFT JOIN recruiters r
+                        ON i.recruiter_id = r.recruiter_id
+                        AND r.application_id = i.application_id
+                    WHERE i.application_id = @applicationId
+                        AND a.user_id = @userId
+                    ORDER BY i.interview_date ASC, i.interview_id ASC;";
+
+                using (MySqlCommand command = new MySqlCommand(query, con))
+                {
+                    command.Parameters.AddWithValue("@applicationId", applicationId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            InterviewSummary interview = new InterviewSummary();
+
+                            interview.InterviewId = Convert.ToInt32(reader["interview_id"]);
+                            interview.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                            interview.RecruiterId = reader["recruiter_id"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["recruiter_id"]);
+                            interview.InterviewTitle = Convert.ToString(reader["interview_title"]);
+                            interview.InterviewType = Convert.ToString(reader["interview_type"]);
+                            interview.InterviewDate = Convert.ToDateTime(reader["interview_date"]).ToString("yyyy-MM-dd HH:mm:ss");
+                            interview.InterviewerName = reader["interviewer_name"] == DBNull.Value ? "" : Convert.ToString(reader["interviewer_name"]);
+                            interview.LocationOrLink = reader["location_or_link"] == DBNull.Value ? "" : Convert.ToString(reader["location_or_link"]);
+                            interview.Notes = reader["notes"] == DBNull.Value ? "" : Convert.ToString(reader["notes"]);
+                            interview.InterviewStatus = Convert.ToString(reader["interview_status"]);
+                            interview.RecruiterName = reader["recruiter_name"] == DBNull.Value ? "" : Convert.ToString(reader["recruiter_name"]);
+
+                            interviews.Add(interview);
+                        }
+                    }
+                }
+            }
+
+            return interviews;
+        }
+        [WebMethod(EnableSession = true)]
+        public List<RecruiterSummary> GetRecruiters()
+        {
+            List<RecruiterSummary> recruiters =
+                new List<RecruiterSummary>();
+
+            if (Session["username"] == null)
+            {
+                return recruiters;
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        SELECT
+                            r.recruiter_id,
+                            r.application_id,
+                            r.first_name,
+                            r.last_name,
+                            r.company_name,
+                            r.email,
+                            r.phone,
+                            r.follow_up_reminder_date,
+                            r.last_contact_date,
+                            r.notes,
+                            a.job_title
+                        FROM recruiters r
+                        INNER JOIN applications a
+                            ON r.application_id = a.application_id
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE u.username = @username
+                        ORDER BY r.updated_at DESC;";
+
+                    using (MySqlCommand cmd =
+                        new MySqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@username",
+                            Session["username"].ToString()
+                        );
+
+                        using (MySqlDataReader reader =
+                            cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                RecruiterSummary recruiter =
+                                    new RecruiterSummary();
+
+                                recruiter.RecruiterId =
+                                    Convert.ToInt32(
+                                        reader["recruiter_id"]
+                                    );
+
+                                recruiter.ApplicationId =
+                                    Convert.ToInt32(
+                                        reader["application_id"]
+                                    );
+
+                                recruiter.FirstName =
+                                    reader["first_name"].ToString();
+
+                                recruiter.LastName =
+                                    reader["last_name"].ToString();
+
+                                recruiter.CompanyName =
+                                    reader["company_name"].ToString();
+
+                                recruiter.Email =
+                                    reader["email"].ToString();
+
+                                recruiter.Phone =
+                                    reader["phone"] == DBNull.Value
+                                        ? ""
+                                        : reader["phone"].ToString();
+
+                                recruiter.JobTitle =
+                                    reader["job_title"].ToString();
+
+                                recruiter.FollowUpReminderDate =
+                                    reader["follow_up_reminder_date"]
+                                        == DBNull.Value
+                                        ? ""
+                                        : Convert.ToDateTime(
+                                            reader[
+                                                "follow_up_reminder_date"
+                                            ]
+                                        ).ToString("yyyy-MM-dd");
+
+                                recruiter.LastContactDate =
+                                    reader["last_contact_date"]
+                                        == DBNull.Value
+                                        ? ""
+                                        : Convert.ToDateTime(
+                                            reader["last_contact_date"]
+                                        ).ToString("yyyy-MM-dd");
+
+                                recruiter.Notes =
+                                    reader["notes"] == DBNull.Value
+                                        ? ""
+                                        : reader["notes"].ToString();
+
+                                recruiters.Add(recruiter);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<RecruiterSummary>();
+            }
+
+            return recruiters;
+        }
+        [WebMethod(EnableSession = true)]
+        public string SetFollowUpDate(
+
+            string linkType,
+            int linkedRecordId,
+            string followUpDate)
+        {
+            if (linkedRecordId <= 0)
+            {
+                return "Invalid record selected.";
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query;
+
+                    if (linkType == "Recruiter")
+                    {
+                        query =
+                            "UPDATE recruiters SET follow_up_reminder_date=@date WHERE recruiter_id=@id";
+                    }
+                    else
+                    {
+                        query =
+                            "UPDATE applications SET follow_up_date=@date WHERE application_id=@id";
+                    }
+
+                    using (MySqlCommand cmd = new MySqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@date",
+                            DateTime.Parse(followUpDate));
+
+                        cmd.Parameters.AddWithValue(
+                            "@id",
+                            linkedRecordId);
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return "Follow-up saved successfully.";
+            }
+            catch (Exception e)
+            {
+                return "Unable to save follow-up. " + e.Message;
+            }
+        }
+        [WebMethod(EnableSession = true)]
+        public List<ApplicationOption> GetApplicationOptions()
+        {
+            List<ApplicationOption> applications =
+                new List<ApplicationOption>();
+
+            if (Session["username"] == null)
+            {
+                return applications;
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        SELECT
+                            a.application_id,
+                            a.company_name,
+                            a.job_title
+                        FROM applications a
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE u.username = @username
+                        AND a.is_archived = 0
+                        ORDER BY a.company_name, a.job_title;";
+
+                    using (MySqlCommand cmd =
+                        new MySqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@username",
+                            Session["username"].ToString()
+                        );
+
+                        using (MySqlDataReader reader =
+                            cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                ApplicationOption application =
+                                    new ApplicationOption();
+
+                                application.ApplicationId =
+                                    Convert.ToInt32(
+                                        reader["application_id"]
+                                    );
+
+                                application.CompanyName =
+                                    reader["company_name"].ToString();
+
+                                application.JobTitle =
+                                    reader["job_title"].ToString();
+
+                                applications.Add(application);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<ApplicationOption>();
+            }
+
+            return applications;
+        }
+        [WebMethod(EnableSession = true)]
+        public List<SearchRecordSummary> GetSearchRecords()
+        {
+            List<SearchRecordSummary> records =
+                new List<SearchRecordSummary>();
+
+            if (Session["username"] == null)
+            {
+                return records;
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        SELECT
+                            'Application' AS record_type,
+                            a.application_id AS record_id,
+                            a.job_title AS title,
+                            a.company_name,
+                            a.application_id AS related_application_id,
+                            a.job_title AS related_application_name,
+                            a.notes,
+                            a.application_status AS record_status,
+                            DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS search_date,
+                            DATE_FORMAT(a.updated_at, '%Y-%m-%d') AS last_updated
+                        FROM applications a
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE u.username = @username
+
+                        UNION ALL
+
+                        SELECT
+                            'Recruiter' AS record_type,
+                            r.recruiter_id AS record_id,
+                            CONCAT(r.first_name, ' ', r.last_name) AS title,
+                            r.company_name,
+                            a.application_id AS related_application_id,
+                            a.job_title AS related_application_name,
+                            r.notes,
+                            '' AS record_status,
+                            COALESCE(
+                                DATE_FORMAT(r.last_contact_date, '%Y-%m-%d'),
+                                DATE_FORMAT(r.follow_up_reminder_date, '%Y-%m-%d'),
+                                DATE_FORMAT(r.updated_at, '%Y-%m-%d')
+                            ) AS search_date,
+                            DATE_FORMAT(r.updated_at, '%Y-%m-%d') AS last_updated
+                        FROM recruiters r
+                        INNER JOIN applications a
+                            ON r.application_id = a.application_id
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE u.username = @username
+
+                        UNION ALL
+
+                        SELECT
+                            'Document' AS record_type,
+                            d.document_id AS record_id,
+                            d.file_name AS title,
+                            a.company_name,
+                            a.application_id AS related_application_id,
+                            a.job_title AS related_application_name,
+                            d.notes,
+                            '' AS record_status,
+                            DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS search_date,
+                            DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS last_updated
+                        FROM documents d
+                        INNER JOIN application_documents ad
+                            ON d.document_id = ad.document_id
+                        INNER JOIN applications a
+                            ON ad.application_id = a.application_id
+                        INNER JOIN users u
+                            ON a.user_id = u.user_id
+                        WHERE u.username = @username
+
+                        ORDER BY last_updated DESC;";
+
+                    using (MySqlCommand cmd =
+                        new MySqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue(
+                            "@username",
+                            Session["username"].ToString()
+                        );
+
+                        using (MySqlDataReader reader =
+                            cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                SearchRecordSummary record =
+                                    new SearchRecordSummary();
+
+                                record.RecordType =
+                                    reader["record_type"].ToString();
+
+                                record.RecordId =
+                                    Convert.ToInt32(reader["record_id"]);
+
+                                record.Title =
+                                    reader["title"].ToString();
+
+                                record.CompanyName =
+                                    reader["company_name"].ToString();
+
+                                record.RelatedApplicationId =
+                                    Convert.ToInt32(
+                                        reader["related_application_id"]
+                                    );
+
+                                record.RelatedApplicationName =
+                                    reader["related_application_name"]
+                                        .ToString();
+
+                                record.Notes =
+                                    reader["notes"] == DBNull.Value
+                                        ? ""
+                                        : reader["notes"].ToString();
+
+                                record.Status =
+                                    reader["record_status"] == DBNull.Value
+                                        ? ""
+                                        : reader["record_status"].ToString();
+
+                                record.SearchDate =
+                                    reader["search_date"] == DBNull.Value
+                                        ? ""
+                                        : reader["search_date"].ToString();
+
+                                record.LastUpdated =
+                                    reader["last_updated"] == DBNull.Value
+                                        ? ""
+                                        : reader["last_updated"].ToString();
+
+                                records.Add(record);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<SearchRecordSummary>();
+            }
+
+            return records;
+        }
+
+        public class RecruiterSummary
+        {
+            public int RecruiterId { get; set; }
+
+            public int ApplicationId { get; set; }
+
+            public string FirstName { get; set; }
+
+            public string LastName { get; set; }
+
+            public string CompanyName { get; set; }
+
+            public string Email { get; set; }
+
+            public string Phone { get; set; }
+
+            public string JobTitle { get; set; }
+
+            public string FollowUpReminderDate { get; set; }
+
+            public string LastContactDate { get; set; }
+
+            public string Notes { get; set; }
+        }
+
+        public class InterviewSummary
+        {
+            public int InterviewId { get; set; }
+
+            public int ApplicationId { get; set; }
+
+            public int? RecruiterId { get; set; }
+
+            public string InterviewTitle { get; set; }
+
+            public string InterviewType { get; set; }
+
+            public string InterviewDate { get; set; }
+
+            public string InterviewerName { get; set; }
+
+            public string LocationOrLink { get; set; }
+
+            public string Notes { get; set; }
+
+            public string InterviewStatus { get; set; }
+
+            public string RecruiterName { get; set; }
+        }
+        public class SearchRecordSummary
+        {
+            public string RecordType { get; set; }
+
+            public int RecordId { get; set; }
+
+            public string Title { get; set; }
+
+            public string CompanyName { get; set; }
+
+            public int RelatedApplicationId { get; set; }
+
+            public string RelatedApplicationName { get; set; }
+
+            public string Notes { get; set; }
+
+            public string Status { get; set; }
+
+            public string SearchDate { get; set; }
+
+            public string LastUpdated { get; set; }
+        }
+        public class ApplicationOption
+        {
+            public int ApplicationId { get; set; }
+
+            public string CompanyName { get; set; }
+
+            public string JobTitle { get; set; }
+        }
+
+        public class DocumentSummary
+        {
+            public int DocumentId { get; set; }
+            public string DocumentType { get; set; }
+            public string FileName { get; set; }
+            public int FileSize { get; set; }
+            public string Notes { get; set; }
+            public string UploadedAt { get; set; }
+            public int ApplicationCount { get; set; }
+        }
+
+        public class DocumentDetailsResult
+        {
+            public int DocumentId { get; set; }
+            public string DocumentType { get; set; }
+            public string FileName { get; set; }
+            public string ContentType { get; set; }
+            public int FileSize { get; set; }
+            public string Notes { get; set; }
+            public string UploadedAt { get; set; }
+            public List<DocumentApplicationSummary> Applications { get; set; }
+        }
+
+        public class DocumentApplicationSummary
+        {
+            public int ApplicationId { get; set; }
+            public string CompanyName { get; set; }
+            public string JobTitle { get; set; }
+            public string ApplicationStatus { get; set; }
+            public string DateApplied { get; set; }
+            public bool IsArchived { get; set; }
+            public string ApplicationNotes { get; set; }
+            public string LinkedAt { get; set; }
+        }
+
         public class ApplicationDocumentsResult
         {
-            public int ApplicationId
-            { get; set; }
-            public string CompanyName
-            { get; set; }
-            public string JobTitle
-            { get; set; }
-            public string Location
-            { get; set; }
-            public string DateApplied
-            { get; set; }
-            public string ApplicationStatus
-            { get; set; }
-            public string JobPostingUrl
-            { get; set; }
-            public string FollowUpDate
-            { get; set; }
+            public int ApplicationId { get; set; }
+            public string CompanyName { get; set; }
+            public string JobTitle { get; set; }
+            public string Location { get; set; }
+            public string DateApplied { get; set; }
+            public string ApplicationStatus { get; set; }
+            public string JobPostingUrl { get; set; }
+            public string FollowUpDate { get; set; }
             public bool IsArchived { get; set; }
-            public List<ApplicationDocumentSummary> Documents
-            { get; set; }
+            public List<ApplicationDocumentSummary> Documents { get; set; }
         }
 
         public class ApplicationDocumentSummary
         {
-            public int DocumentId
-            { get; set; }
-            public string DocumentType
-            { get; set; }
-            public string FileName
-            { get; set; }
-            public int FileSize
-            { get; set; }
-            public string Notes
-            { get; set; }
-            public string UploadedAt
-            { get; set; }
+            public int DocumentId { get; set; }
+            public string DocumentType { get; set; }
+            public string FileName { get; set; }
+            public int FileSize { get; set; }
+            public string Notes { get; set; }
+            public string UploadedAt { get; set; }
         }
-
-        ////////////////////////////////////////////////////////////////////////
-        /// Add Recruiter Function
-        ////////////////////////////////////////////////////////////////////////
-        //        [WebMethod(EnableSession = true)]
-
-
-        //        public string AddRecruiter(
-        //    int applicationId,
-        //    string firstName,
-        //    string lastName,
-        //    string companyName,
-        //    string email,
-        //    string phone,
-        //    string followUpReminderDate,
-        //    string lastContactDate,
-        //    string notes)
-        //{
-        //    if (applicationId <= 0)
-        //    {
-        //        return "A valid job application is required.";
-        //    }
-
-        //    if (string.IsNullOrWhiteSpace(firstName) ||
-        //        string.IsNullOrWhiteSpace(lastName) ||
-        //        string.IsNullOrWhiteSpace(companyName) ||
-        //        string.IsNullOrWhiteSpace(email))
-        //    {
-        //        return "Please complete all required fields.";
-        //    }
-
-        //    try
-        //    {
-        //        using (MySqlConnection con = new MySqlConnection(getConString()))
-        //        {
-        //            con.Open();
-
-        //            string query = @"
-        //                INSERT INTO recruiters
-        //                (
-        //                    application_id,
-        //                    first_name,
-        //                    last_name,
-        //                    company_name,
-        //                    email,
-        //                    phone,
-        //                    follow_up_reminder_date,
-        //                    last_contact_date,
-        //                    notes
-        //                )
-        //                VALUES
-        //                (
-        //                    @applicationId,
-        //                    @firstName,
-        //                    @lastName,
-        //                    @companyName,
-        //                    @email,
-        //                    @phone,
-        //                    @followUpReminderDate,
-        //                    @lastContactDate,
-        //                    @notes
-        //                );";
-
-        //            using (MySqlCommand cmd = new MySqlCommand(query, con))
-        //            {
-        //                cmd.Parameters.AddWithValue("@applicationId", applicationId);
-        //                cmd.Parameters.AddWithValue("@firstName", firstName.Trim());
-        //                cmd.Parameters.AddWithValue("@lastName", lastName.Trim());
-        //                cmd.Parameters.AddWithValue("@companyName", companyName.Trim());
-        //                cmd.Parameters.AddWithValue("@email", email.Trim());
-
-        //                cmd.Parameters.AddWithValue(
-        //                    "@phone",
-        //                    string.IsNullOrWhiteSpace(phone)
-        //                        ? (object)DBNull.Value
-        //                        : phone.Trim());
-
-        //                cmd.Parameters.AddWithValue(
-        //                    "@followUpReminderDate",
-        //                    string.IsNullOrWhiteSpace(followUpReminderDate)
-        //                        ? (object)DBNull.Value
-        //                        : DateTime.Parse(followUpReminderDate));
-
-        //                cmd.Parameters.AddWithValue(
-        //                    "@lastContactDate",
-        //                    string.IsNullOrWhiteSpace(lastContactDate)
-        //                        ? (object)DBNull.Value
-        //                        : DateTime.Parse(lastContactDate));
-
-        //                cmd.Parameters.AddWithValue(
-        //                    "@notes",
-        //                    string.IsNullOrWhiteSpace(notes)
-        //                        ? (object)DBNull.Value
-        //                        : notes.Trim());
-
-        //                cmd.ExecuteNonQuery();
-        //            }
-        //        }
-
-        //        return "Recruiter information saved successfully.";
-        //    }
-        //    catch (FormatException)
-        //    {
-        //        return "One or more dates were entered incorrectly.";
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        return "Unable to save recruiter information. Error: " + e.Message;
-        //    }
-        //}
     }
 }
-

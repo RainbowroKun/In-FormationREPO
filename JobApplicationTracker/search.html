@@ -46,32 +46,32 @@
             Filters the temporary search records using text,
             record type, and the selected date range.
         */
-function LoadSearchRecords() {
+        function LoadSearchRecords() {
 
-    $.ajax({
+            $.ajax({
 
-        type: "POST",
-        url: "ProjectServices.asmx/GetSearchRecords",
-        contentType: "application/json; charset=utf-8",
-        data: "{}",
-        dataType: "json",
+                type: "POST",
+                url: "ProjectServices.asmx/GetSearchRecords",
+                contentType: "application/json; charset=utf-8",
+                data: "{}",
+                dataType: "json",
 
-        success: function (response) {
+                success: function (response) {
 
-            allSearchRecords = response.d || [];
+                    allSearchRecords = response.d || [];
 
-            FilterSearchRecords();
-        },
+                    FilterSearchRecords();
+                },
 
-        error: function () {
+                error: function () {
 
-            ShowPageMessage(
-                "Unable to load search records.",
-                "error"
-            );
+                    ShowPageMessage(
+                        "Unable to load search records.",
+                        "error"
+                    );
+                }
+            });
         }
-    });
-}
         function FilterSearchRecords() {
 
             var searchText = $("#searchText").val().trim().toLowerCase();
@@ -410,10 +410,10 @@ function LoadSearchRecords() {
 
             if (record.RecordType == "Recruiter"
             ) {
-                return ("edit-recruiter.html?recruiterId=" + record.RecordId);
+                return "application-details.html?applicationId=" + record.RelatedApplicationId;
             }
 
-            return ("document-details.html?documentId=" + record.RecordId);
+            return ("documents-details.html?documentId=" + record.RecordId);
         }
 
 
