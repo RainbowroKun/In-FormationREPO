@@ -21,7 +21,7 @@
 
             LoadAccountInformation();
 
-            PopulateCompanyFilter();
+            LoadRecruiters();
 
             $("#recruiterSearch").on("input", FilterRecruiters);
 
@@ -33,7 +33,6 @@
 
             $("#clearRecruiterFilters").on("click", ClearRecruiterFilters);
 
-            FilterRecruiters();
         });
 
 
@@ -41,7 +40,32 @@
             Adds one company option for each unique company
             found in the recruiter list.
         */
+function LoadRecruiters() {
 
+    $.ajax({
+        type: "POST",
+        url: "ProjectServices.asmx/GetRecruiters",
+        contentType: "application/json; charset=utf-8",
+        data: "{}",
+        dataType: "json",
+
+        success: function (response) {
+
+            allRecruiters = response.d || [];
+
+            $("#companyFilter").empty();
+            $("#companyFilter").append("<option value='All'>All Companies</option>");
+
+            PopulateCompanyFilter();
+            FilterRecruiters();
+        },
+
+        error: function () {
+            ShowPageMessage("Unable to load recruiters.", "error");
+        }
+    });
+
+}
         function PopulateCompanyFilter() {
 
             var companies = [];
