@@ -938,6 +938,280 @@ public string DeleteUser(int userId)
         }
 
         ////////////////////////////////////////////////////////////////////////
+/// Edit Application
+////////////////////////////////////////////////////////////////////////
+
+[WebMethod(EnableSession = true)]
+public ApplicationEditDetails GetApplicationById(int applicationId)
+{
+    if (Session["userId"] == null || applicationId <= 0)
+    {
+        return null;
+    }
+
+    int userId = Convert.ToInt32(Session["userId"]);
+
+    using (MySqlConnection con = new MySqlConnection(getConString()))
+    {
+        con.Open();
+
+        string query = @"
+            SELECT
+                application_id,
+                company_name,
+                job_title,
+                location,
+                date_applied,
+                application_status,
+                job_posting_url,
+                follow_up_date,
+                notes
+            FROM applications
+            WHERE application_id = @applicationId
+              AND user_id = @userId
+            LIMIT 1;";
+
+        using (MySqlCommand command = new MySqlCommand(query, con))
+        {
+            command.Parameters.AddWithValue(
+                "@applicationId",
+                applicationId);
+
+            command.Parameters.AddWithValue(
+                "@userId",
+                userId);
+
+            using (MySqlDataReader reader = command.ExecuteReader())
+            {
+                if (!reader.Read())
+                {
+                    return null;
+                }
+
+                ApplicationEditDetails application =
+                    new ApplicationEditDetails();
+
+                application.ApplicationId =
+                    Convert.ToInt32(reader["application_id"]);
+
+                application.CompanyName =
+                    Convert.ToString(reader["company_name"]);
+
+                application.JobTitle =
+                    Convert.ToString(reader["job_title"]);
+
+                application.Location =
+                    reader["location"] == DBNull.Value
+                        ? ""
+                        : Convert.ToString(reader["location"]);
+
+                application.DateApplied =
+                    Convert.ToDateTime(reader["date_applied"])
+                        .ToString("yyyy-MM-dd");
+
+                application.ApplicationStatus =
+                    Convert.ToString(reader["application_status"]);
+
+                application.JobPostingUrl =
+                    reader["job_posting_url"] == DBNull.Value
+                        ? ""
+                        : Convert.ToString(reader["job_posting_url"]);
+
+                application.FollowUpDate =
+                    reader["follow_up_date"] == DBNull.Value
+                        ? ""
+                        : Convert.ToDateTime(reader["follow_up_date"])
+                            .ToString("yyyy-MM-dd");
+
+                application.ApplicationNotes =
+                    reader["notes"] == DBNull.Value
+                        ? ""
+                        : Convert.ToString(reader["notes"]);
+
+                return application;
+            }
+        }
+    }
+}
+
+[WebMethod(EnableSession = true)]
+public string UpdateApplication(
+    int applicationId,
+    string companyName,
+    string jobTitle,
+    string location,
+    string dateApplied,
+    string applicationStatus,
+    string jobPostingUrl,
+    string followUpDate,
+    string applicationNotes)
+{
+    if (Session["userId"] == null)
+    {
+        return "You must be logged in.";
+    }
+
+    if (applicationId <= 0)
+    {
+        return "A valid application is required.";
+    }
+
+    if (string.IsNullOrWhiteSpace(companyName) ||
+        string.IsNullOrWhiteSpace(jobTitle) ||
+        string.IsNullOrWhiteSpace(dateApplied))
+    {
+        return "Please complete every required field.";
+    }
+
+    DateTime parsedDateApplied;
+
+    if (!DateTime.TryParse(dateApplied, out parsedDateApplied))
+    {
+        return "The date applied is invalid.";
+    }
+
+    object followUpDateValue;
+
+    if (!TryGetOptionalDate(
+        followUpDate,
+        out followUpDateValue))
+    {
+        return "The application follow-up date is invalid.";
+    }
+
+    bool validStatus =
+        applicationStatus == "Applied" ||
+        applicationStatus == "Interview" ||
+        applicationStatus == "Offer" ||
+        applicationStatus == "Rejected";
+
+    if (!validStatus)
+    {
+        return "The application status is invalid.";
+    }
+
+    int userId =
+        Convert.ToInt32(Session["userId"]);
+
+    try
+    {
+        using (
+            MySqlConnection con =
+                new MySqlConnection(getConString())
+        )
+        {
+            con.Open();
+
+            string query = @"
+                UPDATE applications
+                SET
+                    company_name = @companyName,
+                    job_title = @jobTitle,
+                    location = @location,
+                    date_applied = @dateApplied,
+                    application_status = @applicationStatus,
+                    job_posting_url = @jobPostingUrl,
+                    follow_up_date = @followUpDate,
+                    notes = @notes,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE application_id = @applicationId
+                  AND user_id = @userId;";
+
+            using (
+                MySqlCommand command =
+                    new MySqlCommand(query, con)
+            )
+            {
+                command.Parameters.AddWithValue(
+                    "@companyName",
+                    companyName.Trim());
+
+                command.Parameters.AddWithValue(
+                    "@jobTitle",
+                    jobTitle.Trim());
+
+                command.Parameters.AddWithValue(
+                    "@location",
+                    EmptyToNull(location));
+
+                command.Parameters.AddWithValue(
+                    "@dateApplied",
+                    parsedDateApplied);
+
+                command.Parameters.AddWithValue(
+                    "@applicationStatus",
+                    applicationStatus);
+
+                command.Parameters.AddWithValue(
+                    "@jobPostingUrl",
+                    EmptyToNull(jobPostingUrl));
+
+                command.Parameters.AddWithValue(
+                    "@followUpDate",
+                    followUpDateValue);
+
+                command.Parameters.AddWithValue(
+                    "@notes",
+                    EmptyToNull(applicationNotes));
+
+                command.Parameters.AddWithValue(
+                    "@applicationId",
+                    applicationId);
+
+                command.Parameters.AddWithValue(
+                    "@userId",
+                    userId);
+
+                int rowsUpdated =
+                    command.ExecuteNonQuery();
+
+                if (rowsUpdated == 0)
+                {
+                    return "The application could not be found or does not belong to your account.";
+                }
+            }
+        }
+
+        return "Success";
+    }
+    catch (Exception ex)
+    {
+        return "Unable to update the application. Error: " +
+            ex.Message;
+    }
+}
+
+public class ApplicationEditDetails
+{
+    public int ApplicationId
+    { get; set; }
+
+    public string CompanyName
+    { get; set; }
+
+    public string JobTitle
+    { get; set; }
+
+    public string Location
+    { get; set; }
+
+    public string DateApplied
+    { get; set; }
+
+    public string ApplicationStatus
+    { get; set; }
+
+    public string JobPostingUrl
+    { get; set; }
+
+    public string FollowUpDate
+    { get; set; }
+
+    public string ApplicationNotes
+    { get; set; }
+}
+
+        ////////////////////////////////////////////////////////////////////////
         /// View Applications Function
         ////////////////////////////////////////////////////////////////////////
         [WebMethod(EnableSession = true)]
