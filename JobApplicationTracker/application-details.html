@@ -30,6 +30,7 @@
             LoadApplicationDocuments();
             LoadApplicationRecruiters();
             LoadApplicationInterviews();
+            UpdatePageNavigation();
         });
 
         function GetApplicationIdFromUrl() {
@@ -219,19 +220,50 @@
             }
 
             interviews.forEach(function (interview) {
+                var interviewerName = interview.InterviewerName || "—";
+                var showRecruiter = interview.RecruiterName && interview.RecruiterName != interview.InterviewerName;
+                var typeClass = "interviewTypeOther";
+                if (interview.InterviewType == "Phone") {
+                    typeClass = "interviewTypePhone";
+                }
+                else if (interview.InterviewType == "Video") {
+                    typeClass = "interviewTypeVideo";
+                }
+                else if (interview.InterviewType == "Onsite") {
+                    typeClass = "interviewTypeOnsite";
+                }
+
                 var interviewCard =
                     "<article class='interviewCard'>" +
                         "<div class='interviewHeading'>" +
-                            "<h4>" + EscapeHtml(interview.InterviewTitle || "Interview") + "</h4>" +
+                            "<div>" +
+                                "<h4>" + EscapeHtml(interview.InterviewTitle || "Interview") + "</h4>" +
+                                "<div class='interviewMeta'>" +
+                                    "<span class='interviewTypeBadge " + typeClass + "'>" + EscapeHtml(interview.InterviewType || "Other") + "</span>" +
+                                    "<span class='interviewDateTime'>" + FormatDateTime(interview.InterviewDate) + "</span>" +
+                                "</div>" +
+                            "</div>" +
                             "<span class='statusBadge'>" + EscapeHtml(interview.InterviewStatus || "Scheduled") + "</span>" +
                         "</div>" +
                         "<div class='interviewDetails'>" +
-                            "<div><label>Interview Type</label><p>" + EscapeHtml(interview.InterviewType || "—") + "</p></div>" +
-                            "<div><label>Date and Time</label><p>" + FormatDateTime(interview.InterviewDate) + "</p></div>" +
-                            "<div><label>Interviewer</label><p>" + EscapeHtml(interview.InterviewerName || "—") + "</p></div>" +
-                            "<div><label>Recruiter</label><p>" + EscapeHtml(interview.RecruiterName || "—") + "</p></div>" +
-                            "<div class='wideField'><label>Location or Meeting Link</label><p>" + EscapeHtml(interview.LocationOrLink || "—") + "</p></div>" +
-                            "<div class='wideField'><label>Notes</label><p>" + EscapeHtml(interview.Notes || "No notes were added.") + "</p></div>" +
+                            "<div>" +
+                                "<label>Interviewer</label>" +
+                                "<p>" + EscapeHtml(interviewerName) + "</p>" +
+                            "</div>" +
+                            (showRecruiter
+                                ? "<div>" +
+                                    "<label>Recruiter</label>" +
+                                    "<p>" + EscapeHtml(interview.RecruiterName) + "</p>" +
+                                "</div>"
+                                : "") +
+                            "<div class='wideField'>" +
+                                "<label>Location or Meeting Link</label>" +
+                                "<p>" + EscapeHtml(interview.LocationOrLink || "—") + "</p>" +
+                            "</div>" +
+                            "<div class='wideField'>" +
+                                "<label>Notes</label>" +
+                                "<p class='interviewNotes'>" + EscapeHtml(interview.Notes || "No notes were added.") + "</p>" +
+                            "</div>" +
                         "</div>" +
                     "</article>";
 
@@ -494,6 +526,100 @@
             margin: 0;
             color: #1e293b;
         }
+
+        .interviewCard {
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: #ffffff;
+        }
+
+        .interviewCard + .interviewCard {
+            margin-top: 16px;
+        }
+
+        .interviewHeading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .interviewHeading h4 {
+            margin: 0 0 9px;
+            color: #0f172a;
+            font-size: 18px;
+        }
+
+        .interviewMeta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .interviewDateTime {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .interviewTypeBadge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .interviewTypePhone {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .interviewTypeVideo {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .interviewTypeOnsite {
+            background-color: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .interviewTypeOther {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
+
+        .interviewDetails {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px 24px;
+            padding-top: 18px;
+        }
+
+        .interviewDetails label {
+            display: block;
+            margin-bottom: 5px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .interviewDetails p {
+            margin: 0;
+            color: #0f172a;
+            line-height: 1.5;
+        }
+
+        .interviewDetails .wideField {
+            grid-column: 1 / -1;
+        }
+
+        .interviewNotes {
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -515,10 +641,10 @@
         <nav class="pageNav">
             <a href="home-page.html">Home</a>
             <span>&gt;</span>
-            <a href="view-applications.html">Applications</a>
+            <a id="sourceBreadcrumb" href="view-applications.html">View Applications</a>
             <span>&gt;</span>
-            <span>Details</span>
-        </nav>
+            <span>Application Details</span>
+        </nav> 
 
         <div class="pageHeadingRow">
             <div class="pageHeading">
@@ -527,7 +653,11 @@
             </div>
 
             <div class="rowActions">
-                <a class="secondaryButton" href="view-applications.html">Back</a>
+                <button type="button"
+                        class="secondaryButton"
+                        onclick="GoBackOrDefault('view-applications.html');">
+                    Back
+                </button>
                 <a class="primaryButton" id="editApplicationButton" href="#">Edit Application</a>
             </div>
         </div>

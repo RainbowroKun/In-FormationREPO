@@ -27,6 +27,7 @@
             );
 
             LoadDocumentDetails();
+            UpdatePageNavigation();
         });
 
         function GetDocumentIdFromUrl() {
@@ -299,10 +300,10 @@
         <nav class="pageNav">
             <a href="home-page.html">Home</a>
             <span>&gt;</span>
-            <a href="view-documents.html">Documents</a>
+            <a id="sourceBreadcrumb" href="view-documents.html">View Documents</a>
             <span>&gt;</span>
-            <span>Details</span>
-        </nav>
+            <span>Document Details</span>
+        </nav> 
 
         <div class="pageHeadingRow">
             <div class="pageHeading">
@@ -311,7 +312,11 @@
             </div>
 
             <div class="rowActions">
-                <a class="secondaryButton" href="view-documents.html">Back to Documents</a>
+                <button type="button"
+                        class="secondaryButton"
+                        onclick="GoBackOrDefault('view-documents.html');">
+                    Back
+                </button>
                 <a class="primaryButton" id="downloadDocumentButton" href="#">Download</a>
             </div>
         </div>

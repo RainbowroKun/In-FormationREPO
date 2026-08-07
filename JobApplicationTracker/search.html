@@ -345,7 +345,7 @@
             }
 
             return (
-                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "'>" +
+                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "'&source=search>" +
                     EscapeHtml(record.RelatedApplicationName) +
                 "</a>"
             );
@@ -405,15 +405,15 @@
 
             if (record.RecordType == "Application"
             ) {
-                return ("application-details.html?applicationId=" + record.RecordId);
+                return ("application-details.html?applicationId=" + record.RecordId + "&source=search");
             }
 
             if (record.RecordType == "Recruiter"
             ) {
-                return "application-details.html?applicationId=" + record.RelatedApplicationId;
+                return "application-details.html?applicationId=" + record.RelatedApplicationId + "&source=search";
             }
 
-            return ("documents-details.html?documentId=" + record.RecordId);
+            return ("documents-details.html?documentId=" + record.RecordId + "&source=search");
         }
 
 

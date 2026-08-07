@@ -41,28 +41,32 @@
         */
 
         function LoadApplicationOptions() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplications",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-            var applications = [];
+                success: function (msg) {
+                    var applications = msg.d || [];
+                    var applicationSelect = $("#applicationId");
 
-            var applicationSelect = $("#applicationId");
-
-            applications.forEach(function (application) {
-                applicationSelect.append($("<option>").val(application.ApplicationId)
-                .text(application.CompanyName + " — " + application.JobTitle));
+                    applications.forEach(function (application) {
+                        applicationSelect.append($("<option>").val(application.ApplicationId).text(application.CompanyName + " — " + application.JobTitle));
+                    });
+                    if (applications.length == 0) {
+                        ShowPageMessage("You need to add an application before adding a recruiter.", "error");
+                    }
+                },
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load your applications.", "error");
                 }
-            );
+            });
         }
 
-
-        /*
-            Placeholder save behavior.
-
-            Your team can later replace this with an AJAX call
-            to ProjectServices.asmx/AddRecruiter.
-        */
-
         function SaveRecruiter() {
-
             var form = document.getElementById("recruiterForm");
 
             if (!form.checkValidity()) {
@@ -71,33 +75,46 @@
             }
 
             ClearPageMessage();
+            $("#saveRecruiterButton").prop("disabled", true);
 
-            var recruiter = {
-                ApplicationId: parseInt($("#applicationId").val(), 10),
+            var parameters = JSON.stringify({
+                applicationId: parseInt($("#applicationId").val(), 10),
+                firstName: $("#firstName").val().trim(),
+                lastName: $("#lastName").val().trim(),
+                email: $("#email").val().trim(),
+                phone: $("#phone").val().trim(),
+                followUpReminderDate: $("#followUpReminderDate").val(),
+                lastContactDate: $("#lastContactDate").val(),
+                notes: $("#notes").val().trim()
+            });
 
-                FirstName: $("#firstName").val().trim(),
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/AddRecruiter",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-                LastName: $("#lastName").val().trim(),
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Recruiter saved successfully.", "success");
+                        form.reset();
+                        $("#firstName").focus();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
 
-                Title: $("#recruiterTitle").val().trim(),
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to save the recruiter. Check the browser console.", "error");
+                },
 
-                Email: $("#email").val().trim(),
-
-                Phone: $("#phone").val().trim(),
-
-                LastContactDate: $("#lastContactDate").val(),
-
-                FollowUpReminderDate:$("#followUpReminderDate").val(),
-
-                Notes: $("#notes").val().trim()
-            };
-
-            console.log(recruiter);
-
-            ShowPageMessage(
-                "Recruiter information is ready to be connected to the backend.",
-                "success"
-            );
+                complete: function () {
+                    $("#saveRecruiterButton").prop("disabled", false);
+                }
+            });
         }
 
 
@@ -324,19 +341,6 @@
 
                     </div>
 
-                    <div class="formField">
-
-                        <label for="recruiterTitle">
-                            Title / Position
-                        </label>
-
-                        <input type="text"
-                               id="recruiterTitle"
-                               maxlength="100"
-                               placeholder="Enter title or position" />
-
-                    </div>
-
                     <div class="formField fullWidthField">
 
                         <label for="applicationId">
@@ -361,12 +365,14 @@
 
                         <label for="email">
                             Email
+                            <span class="requiredMark">*</span>
                         </label>
 
                         <input type="email"
                                id="email"
                                maxlength="100"
-                               placeholder="Enter email address" />
+                               placeholder="Enter email address"
+                               required />
 
                     </div>
 

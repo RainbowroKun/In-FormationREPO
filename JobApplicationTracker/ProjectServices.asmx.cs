@@ -1699,6 +1699,336 @@ public class ApplicationEditDetails
         ////////////////////////////////////////////////////////////////////////
 
         [WebMethod(EnableSession = true)]
+        public string AddInterview(
+            int applicationId,
+            int? recruiterId,
+            string interviewTitle,
+            string interviewType,
+            string interviewDate,
+            string interviewerName,
+            string locationOrLink,
+            string notes)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0)
+            {
+                return "A valid job application is required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(interviewTitle) ||
+                string.IsNullOrWhiteSpace(interviewType) ||
+                string.IsNullOrWhiteSpace(interviewDate))
+            {
+                return "Please enter the interview title, type, date, and time.";
+            }
+
+            if (interviewTitle.Trim().Length > 100 ||
+                interviewerName != null && interviewerName.Trim().Length > 100 ||
+                locationOrLink != null && locationOrLink.Trim().Length > 500 ||
+                notes != null && notes.Trim().Length > 2000)
+            {
+                return "One or more interview fields are too long.";
+            }
+
+            if (interviewType != "Phone" &&
+                interviewType != "Video" &&
+                interviewType != "Onsite" &&
+                interviewType != "Other")
+            {
+                return "The selected interview type is invalid.";
+            }
+
+            DateTime parsedInterviewDate;
+
+            if (!DateTime.TryParse(interviewDate, out parsedInterviewDate))
+            {
+                return "The interview date or time is invalid.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            object recruiterValue = recruiterId.HasValue && recruiterId.Value > 0
+                ? (object)recruiterId.Value
+                : DBNull.Value;
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        INSERT INTO interviews
+                            (application_id, recruiter_id, interview_title,
+                            interview_type, interview_date, interviewer_name,
+                            location_or_link, notes, interview_status)
+                        SELECT
+                            a.application_id,
+                            @recruiterId,
+                            @interviewTitle,
+                            @interviewType,
+                            @interviewDate,
+                            @interviewerName,
+                            @locationOrLink,
+                            @notes,
+                            'Scheduled'
+                        FROM applications a
+                        WHERE a.application_id = @applicationId
+                            AND a.user_id = @userId
+                            AND (
+                                @recruiterId IS NULL
+                                OR EXISTS (
+                                    SELECT 1
+                                    FROM recruiters r
+                                    WHERE r.recruiter_id = @recruiterId
+                                        AND r.application_id = a.application_id
+                                )
+                            );";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@applicationId", applicationId);
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@recruiterId", recruiterValue);
+                        command.Parameters.AddWithValue("@interviewTitle", interviewTitle.Trim());
+                        command.Parameters.AddWithValue("@interviewType", interviewType);
+                        command.Parameters.AddWithValue("@interviewDate", parsedInterviewDate);
+                        command.Parameters.AddWithValue("@interviewerName", EmptyToNull(interviewerName));
+                        command.Parameters.AddWithValue("@locationOrLink", EmptyToNull(locationOrLink));
+                        command.Parameters.AddWithValue("@notes", EmptyToNull(notes));
+
+                        int rowsAdded = command.ExecuteNonQuery();
+
+                        if (rowsAdded == 0)
+                        {
+                            return "The selected application or recruiter could not be found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to save the interview. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public InterviewSummary GetInterview(int interviewId)
+        {
+            if (Session["userId"] == null || interviewId <= 0)
+            {
+                return null;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        i.interview_id,
+                        i.application_id,
+                        i.recruiter_id,
+                        i.interview_title,
+                        i.interview_type,
+                        i.interview_date,
+                        i.interviewer_name,
+                        i.location_or_link,
+                        i.notes,
+                        i.interview_status,
+                        i.interview_status,
+                        TRIM(CONCAT_WS(' ', r.first_name, r.last_name)) AS recruiter_name,
+                        a.company_name,
+                        a.job_title
+                    FROM interviews i
+                    INNER JOIN applications a
+                        ON i.application_id = a.application_id
+                    LEFT JOIN recruiters r
+                        ON i.recruiter_id = r.recruiter_id
+                        AND r.application_id = i.application_id
+                    WHERE i.interview_id = @interviewId
+                        AND a.user_id = @userId
+                    LIMIT 1;";
+
+                using (MySqlCommand command = new MySqlCommand(query, con))
+                {
+                    command.Parameters.AddWithValue("@interviewId", interviewId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            InterviewSummary interview = new InterviewSummary();
+
+                            interview.InterviewId = Convert.ToInt32(reader["interview_id"]);
+                            interview.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                            interview.RecruiterId = reader["recruiter_id"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["recruiter_id"]);
+                            interview.InterviewTitle = Convert.ToString(reader["interview_title"]);
+                            interview.InterviewType = Convert.ToString(reader["interview_type"]);
+                            interview.InterviewDate = Convert.ToDateTime(reader["interview_date"]).ToString("yyyy-MM-dd HH:mm:ss");
+                            interview.InterviewerName = reader["interviewer_name"] == DBNull.Value ? "" : Convert.ToString(reader["interviewer_name"]);
+                            interview.LocationOrLink = reader["location_or_link"] == DBNull.Value ? "" : Convert.ToString(reader["location_or_link"]);
+                            interview.Notes = reader["notes"] == DBNull.Value ? "" : Convert.ToString(reader["notes"]);
+                            interview.InterviewStatus = Convert.ToString(reader["interview_status"]);
+                            interview.RecruiterName = reader["recruiter_name"] == DBNull.Value ? "" : Convert.ToString(reader["recruiter_name"]);
+                            interview.CompanyName = Convert.ToString(reader["company_name"]);
+                            interview.ApplicationName = Convert.ToString(reader["job_title"]);
+
+                            return interview;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string UpdateInterview(
+            int interviewId,
+            int applicationId,
+            int? recruiterId,
+            string interviewTitle,
+            string interviewType,
+            string interviewDate,
+            string interviewerName,
+            string locationOrLink,
+            string notes,
+            string interviewStatus)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (interviewId <= 0 || applicationId <= 0)
+            {
+                return "A valid interview and job application are required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(interviewTitle) ||
+                string.IsNullOrWhiteSpace(interviewType) ||
+                string.IsNullOrWhiteSpace(interviewDate) ||
+                string.IsNullOrWhiteSpace(interviewStatus))
+            {
+                return "Please enter the interview title, type, date, time, and status.";
+            }
+
+            if (interviewTitle.Trim().Length > 100 ||
+                interviewerName != null && interviewerName.Trim().Length > 100 ||
+                locationOrLink != null && locationOrLink.Trim().Length > 500 ||
+                notes != null && notes.Trim().Length > 2000)
+            {
+                return "One or more interview fields are too long.";
+            }
+
+            if (interviewType != "Phone" &&
+                interviewType != "Video" &&
+                interviewType != "Onsite" &&
+                interviewType != "Other")
+            {
+                return "The selected interview type is invalid.";
+            }
+
+            if (interviewStatus != "Scheduled" &&
+                interviewStatus != "Completed" &&
+                interviewStatus != "Cancelled")
+            {
+                return "The selected interview status is invalid.";
+            }
+
+            DateTime parsedInterviewDate;
+
+            if (!DateTime.TryParse(interviewDate, out parsedInterviewDate))
+            {
+                return "The interview date or time is invalid.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            object recruiterValue = recruiterId.HasValue && recruiterId.Value > 0
+                ? (object)recruiterId.Value
+                : DBNull.Value;
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        UPDATE interviews i
+                        INNER JOIN applications currentApplication
+                            ON i.application_id = currentApplication.application_id
+                        SET
+                            i.application_id = @applicationId,
+                            i.recruiter_id = @recruiterId,
+                            i.interview_title = @interviewTitle,
+                            i.interview_type = @interviewType,
+                            i.interview_date = @interviewDate,
+                            i.interviewer_name = @interviewerName,
+                            i.location_or_link = @locationOrLink,
+                            i.notes = @notes,
+                            i.interview_status = @interviewStatus
+                        WHERE i.interview_id = @interviewId
+                            AND currentApplication.user_id = @userId
+                            AND EXISTS (
+                                SELECT 1
+                                FROM applications selectedApplication
+                                WHERE selectedApplication.application_id = @applicationId
+                                    AND selectedApplication.user_id = @userId
+                            )
+                            AND (
+                                @recruiterId IS NULL
+                                OR EXISTS (
+                                    SELECT 1
+                                    FROM recruiters r
+                                    WHERE r.recruiter_id = @recruiterId
+                                        AND r.application_id = @applicationId
+                                )
+                            );";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@interviewId", interviewId);
+                        command.Parameters.AddWithValue("@applicationId", applicationId);
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@recruiterId", recruiterValue);
+                        command.Parameters.AddWithValue("@interviewTitle", interviewTitle.Trim());
+                        command.Parameters.AddWithValue("@interviewType", interviewType);
+                        command.Parameters.AddWithValue("@interviewDate", parsedInterviewDate);
+                        command.Parameters.AddWithValue("@interviewerName", EmptyToNull(interviewerName));
+                        command.Parameters.AddWithValue("@locationOrLink", EmptyToNull(locationOrLink));
+                        command.Parameters.AddWithValue("@notes", EmptyToNull(notes));
+                        command.Parameters.AddWithValue("@interviewStatus", interviewStatus);
+
+                        int rowsUpdated = command.ExecuteNonQuery();
+
+                        if (rowsUpdated == 0)
+                        {
+                            return "The interview, application, or recruiter could not be found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to update the interview. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
         public List<InterviewSummary> GetApplicationInterviews(int applicationId)
         {
             List<InterviewSummary> interviews = new List<InterviewSummary>();
@@ -1768,6 +2098,150 @@ public class ApplicationEditDetails
 
             return interviews;
         }
+
+        [WebMethod(EnableSession = true)]
+        public bool DeleteInterview(int interviewId)
+        {
+            if (Session["userId"] == null || interviewId <= 0)
+            {
+                return false;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    DELETE FROM interviews
+                    WHERE interview_id = @interviewId
+                    AND application_id IN
+                    (
+                        SELECT application_id
+                        FROM applications
+                        WHERE user_id = @userId
+                    );";
+
+                using (MySqlCommand command = new MySqlCommand(query, con))
+                {
+                    command.Parameters.AddWithValue("@interviewId", interviewId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    int deletedRows = command.ExecuteNonQuery();
+
+                    return deletedRows > 0;
+                }
+            }
+        }
+        ////////////////////////////////////////////////////////////////////////
+        /// Recruiter Functions
+        ////////////////////////////////////////////////////////////////////////
+
+        [WebMethod(EnableSession = true)]
+        public string AddRecruiter(
+            int applicationId,
+            string firstName,
+            string lastName,
+            string email,
+            string phone,
+            string followUpReminderDate,
+            string lastContactDate,
+            string notes)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0)
+            {
+                return "A valid job application is required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(firstName) ||
+                string.IsNullOrWhiteSpace(lastName) ||
+                string.IsNullOrWhiteSpace(email))
+            {
+                return "Please enter the recruiter's first name, last name, and email.";
+            }
+
+            if (firstName.Trim().Length > 50 ||
+                lastName.Trim().Length > 50 ||
+                email.Trim().Length > 100 ||
+                (!string.IsNullOrWhiteSpace(phone) && phone.Trim().Length > 25))
+            {
+                return "One or more recruiter fields are too long.";
+            }
+
+            object followUpReminderValue;
+            object lastContactValue;
+
+            if (!TryGetOptionalDate(followUpReminderDate, out followUpReminderValue))
+            {
+                return "The follow-up reminder date is invalid.";
+            }
+
+            if (!TryGetOptionalDate(lastContactDate, out lastContactValue))
+            {
+                return "The last-contact date is invalid.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        INSERT INTO recruiters
+                            (application_id, first_name, last_name, company_name, email,
+                            phone, follow_up_reminder_date, last_contact_date, notes)
+                        SELECT
+                            a.application_id,
+                            @firstName,
+                            @lastName,
+                            a.company_name,
+                            @email,
+                            @phone,
+                            @followUpReminderDate,
+                            @lastContactDate,
+                            @notes
+                        FROM applications a
+                        WHERE a.application_id = @applicationId
+                            AND a.user_id = @userId;";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@applicationId", applicationId);
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@firstName", firstName.Trim());
+                        command.Parameters.AddWithValue("@lastName", lastName.Trim());
+                        command.Parameters.AddWithValue("@email", email.Trim());
+                        command.Parameters.AddWithValue("@phone", EmptyToNull(phone));
+                        command.Parameters.AddWithValue("@followUpReminderDate", followUpReminderValue);
+                        command.Parameters.AddWithValue("@lastContactDate", lastContactValue);
+                        command.Parameters.AddWithValue("@notes", EmptyToNull(notes));
+
+                        int rowsAdded = command.ExecuteNonQuery();
+
+                        if (rowsAdded == 0)
+                        {
+                            return "The selected application could not be found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to save recruiter information. Error: " + ex.Message;
+            }
+        }
+
         [WebMethod(EnableSession = true)]
         public List<RecruiterSummary> GetRecruiters()
         {
@@ -1890,21 +2364,35 @@ public class ApplicationEditDetails
             return recruiters;
         }
         [WebMethod(EnableSession = true)]
-        public string SetFollowUpDate(
-
-            string linkType,
-            int linkedRecordId,
-            string followUpDate)
+        public string SetFollowUpDate(string linkType, int linkedRecordId, string followUpDate)
         {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
             if (linkedRecordId <= 0)
             {
-                return "Invalid record selected.";
+                return "A valid record must be selected.";
             }
+
+            if (linkType != "Application" && linkType != "Recruiter")
+            {
+                return "The selected follow-up type is invalid.";
+            }
+
+            DateTime parsedFollowUpDate;
+
+            if (!DateTime.TryParse(followUpDate, out parsedFollowUpDate))
+            {
+                return "The follow-up date is invalid.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
 
             try
             {
-                using (MySqlConnection con =
-                    new MySqlConnection(getConString()))
+                using (MySqlConnection con = new MySqlConnection(getConString()))
                 {
                     con.Open();
 
@@ -1912,36 +2400,209 @@ public class ApplicationEditDetails
 
                     if (linkType == "Recruiter")
                     {
-                        query =
-                            "UPDATE recruiters SET follow_up_reminder_date=@date WHERE recruiter_id=@id";
+                        query = @"
+                            UPDATE recruiters r
+                            INNER JOIN applications a
+                                ON r.application_id = a.application_id
+                            SET r.follow_up_reminder_date = @followUpDate
+                            WHERE r.recruiter_id = @linkedRecordId
+                                AND a.user_id = @userId;";
                     }
                     else
                     {
-                        query =
-                            "UPDATE applications SET follow_up_date=@date WHERE application_id=@id";
+                        query = @"
+                            UPDATE applications
+                            SET follow_up_date = @followUpDate
+                            WHERE application_id = @linkedRecordId
+                                AND user_id = @userId;";
                     }
 
-                    using (MySqlCommand cmd = new MySqlCommand(query, con))
+                    using (MySqlCommand command = new MySqlCommand(query, con))
                     {
-                        cmd.Parameters.AddWithValue(
-                            "@date",
-                            DateTime.Parse(followUpDate));
+                        command.Parameters.AddWithValue("@followUpDate", parsedFollowUpDate.Date);
+                        command.Parameters.AddWithValue("@linkedRecordId", linkedRecordId);
+                        command.Parameters.AddWithValue("@userId", userId);
 
-                        cmd.Parameters.AddWithValue(
-                            "@id",
-                            linkedRecordId);
+                        int rowsUpdated = command.ExecuteNonQuery();
 
-                        cmd.ExecuteNonQuery();
+                        if (rowsUpdated == 0)
+                        {
+                            return "The selected record could not be found.";
+                        }
                     }
                 }
 
                 return "Follow-up saved successfully.";
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                return "Unable to save follow-up. " + e.Message;
+                return "Unable to save the follow-up. Error: " + ex.Message;
             }
         }
+
+        [WebMethod(EnableSession = true)]
+        public List<FollowUpReminderSummary> GetFollowUpReminders()
+        {
+            List<FollowUpReminderSummary> followUps = new List<FollowUpReminderSummary>();
+
+            if (Session["userId"] == null)
+            {
+                return followUps;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        SELECT
+                            'Application' AS follow_up_type,
+                            a.application_id AS related_id,
+                            a.job_title AS follow_up_name,
+                            a.application_id,
+                            a.company_name,
+                            a.job_title AS application_name,
+                            a.follow_up_date
+                        FROM applications a
+                        WHERE a.user_id = @userId
+                            AND a.follow_up_date IS NOT NULL
+
+                        UNION ALL
+
+                        SELECT
+                            'Recruiter' AS follow_up_type,
+                            r.recruiter_id AS related_id,
+                            TRIM(CONCAT_WS(' ', r.first_name, r.last_name)) AS follow_up_name,
+                            a.application_id,
+                            a.company_name,
+                            a.job_title AS application_name,
+                            r.follow_up_reminder_date AS follow_up_date
+                        FROM recruiters r
+                        INNER JOIN applications a
+                            ON r.application_id = a.application_id
+                        WHERE a.user_id = @userId
+                            AND r.follow_up_reminder_date IS NOT NULL
+
+                        ORDER BY follow_up_date ASC, follow_up_type ASC;";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@userId", userId);
+
+                        using (MySqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                FollowUpReminderSummary followUp = new FollowUpReminderSummary();
+
+                                followUp.FollowUpType = Convert.ToString(reader["follow_up_type"]);
+                                followUp.RelatedId = Convert.ToInt32(reader["related_id"]);
+                                followUp.FollowUpName = Convert.ToString(reader["follow_up_name"]);
+                                followUp.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                                followUp.CompanyName = Convert.ToString(reader["company_name"]);
+                                followUp.ApplicationName = Convert.ToString(reader["application_name"]);
+                                followUp.FollowUpDate = Convert.ToDateTime(reader["follow_up_date"]).ToString("yyyy-MM-dd");
+
+                                followUps.Add(followUp);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<FollowUpReminderSummary>();
+            }
+
+            return followUps;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public List<InterviewSummary> GetUpcomingInterviews()
+        {
+            List<InterviewSummary> interviews = new List<InterviewSummary>();
+
+            if (Session["userId"] == null)
+            {
+                return interviews;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        SELECT
+                            i.interview_id,
+                            i.application_id,
+                            i.recruiter_id,
+                            i.interview_title,
+                            i.interview_type,
+                            i.interview_date,
+                            i.interviewer_name,
+                            i.location_or_link,
+                            i.notes,
+                            i.interview_status,
+                            a.company_name,
+                            a.job_title AS application_name,
+                            TRIM(CONCAT_WS(' ', r.first_name, r.last_name)) AS recruiter_name
+                        FROM interviews i
+                        INNER JOIN applications a
+                            ON i.application_id = a.application_id
+                        LEFT JOIN recruiters r
+                            ON i.recruiter_id = r.recruiter_id
+                            AND r.application_id = i.application_id
+                        WHERE a.user_id = @userId
+                            AND i.interview_date >= NOW()
+                            AND i.interview_status = 'Scheduled'
+                        ORDER BY i.interview_date ASC, i.interview_id ASC;";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@userId", userId);
+
+                        using (MySqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                InterviewSummary interview = new InterviewSummary();
+
+                                interview.InterviewId = Convert.ToInt32(reader["interview_id"]);
+                                interview.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                                interview.RecruiterId = reader["recruiter_id"] == DBNull.Value ? (int?)null : Convert.ToInt32(reader["recruiter_id"]);
+                                interview.InterviewTitle = Convert.ToString(reader["interview_title"]);
+                                interview.InterviewType = Convert.ToString(reader["interview_type"]);
+                                interview.InterviewDate = Convert.ToDateTime(reader["interview_date"]).ToString("yyyy-MM-dd HH:mm:ss");
+                                interview.InterviewerName = reader["interviewer_name"] == DBNull.Value ? "" : Convert.ToString(reader["interviewer_name"]);
+                                interview.LocationOrLink = reader["location_or_link"] == DBNull.Value ? "" : Convert.ToString(reader["location_or_link"]);
+                                interview.Notes = reader["notes"] == DBNull.Value ? "" : Convert.ToString(reader["notes"]);
+                                interview.InterviewStatus = Convert.ToString(reader["interview_status"]);
+                                interview.RecruiterName = reader["recruiter_name"] == DBNull.Value ? "" : Convert.ToString(reader["recruiter_name"]);
+                                interview.CompanyName = Convert.ToString(reader["company_name"]);
+                                interview.ApplicationName = Convert.ToString(reader["application_name"]);
+
+                                interviews.Add(interview);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return new List<InterviewSummary>();
+            }
+
+            return interviews;
+        }
+
         [WebMethod(EnableSession = true)]
         public List<ApplicationOption> GetApplicationOptions()
         {
@@ -2169,80 +2830,53 @@ public class ApplicationEditDetails
         public class RecruiterSummary
         {
             public int RecruiterId { get; set; }
-
             public int ApplicationId { get; set; }
-
             public string FirstName { get; set; }
-
             public string LastName { get; set; }
-
             public string CompanyName { get; set; }
-
             public string Email { get; set; }
-
             public string Phone { get; set; }
-
             public string JobTitle { get; set; }
-
             public string FollowUpReminderDate { get; set; }
-
             public string LastContactDate { get; set; }
-
             public string Notes { get; set; }
         }
 
         public class InterviewSummary
         {
             public int InterviewId { get; set; }
-
             public int ApplicationId { get; set; }
-
             public int? RecruiterId { get; set; }
-
             public string InterviewTitle { get; set; }
-
             public string InterviewType { get; set; }
-
             public string InterviewDate { get; set; }
-
             public string InterviewerName { get; set; }
-
             public string LocationOrLink { get; set; }
-
             public string Notes { get; set; }
-
             public string InterviewStatus { get; set; }
-
             public string RecruiterName { get; set; }
+            public string CompanyName { get; set; }
+            public string ApplicationName { get; set; }
         }
+
         public class SearchRecordSummary
         {
             public string RecordType { get; set; }
-
             public int RecordId { get; set; }
-
             public string Title { get; set; }
-
             public string CompanyName { get; set; }
-
             public int RelatedApplicationId { get; set; }
-
             public string RelatedApplicationName { get; set; }
-
             public string Notes { get; set; }
-
             public string Status { get; set; }
-
             public string SearchDate { get; set; }
-
             public string LastUpdated { get; set; }
         }
+
         public class ApplicationOption
         {
             public int ApplicationId { get; set; }
-
             public string CompanyName { get; set; }
-
             public string JobTitle { get; set; }
         }
 
@@ -2303,6 +2937,17 @@ public class ApplicationEditDetails
             public int FileSize { get; set; }
             public string Notes { get; set; }
             public string UploadedAt { get; set; }
+        }
+
+        public class FollowUpReminderSummary
+        {
+            public string FollowUpType { get; set; }
+            public int RelatedId { get; set; }
+            public string FollowUpName { get; set; }
+            public int ApplicationId { get; set; }
+            public string CompanyName { get; set; }
+            public string ApplicationName { get; set; }
+            public string FollowUpDate { get; set; }
         }
     }
 }

@@ -14,7 +14,6 @@
 
     <script>
         var allFollowUps = [];
-
         var allInterviews = [];
 
 
@@ -26,18 +25,60 @@
             $("#followUpStatusFilter").on("change", DisplayFollowUps);
             $("#followUpSort").on("change", DisplayFollowUps);
 
-            DisplayFollowUps();
-            DisplayInterviews();
-            UpdateReminderSummaryCards();
+            LoadFollowUps();
+            LoadInterviews();
         });
 
+        function LoadFollowUps() {
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetFollowUpReminders",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    allFollowUps = msg.d || [];
+                    DisplayFollowUps();
+                    UpdateReminderSummaryCards();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load follow-up reminders.", "error");
+                    UpdateReminderSummaryCards();
+                }
+            });
+        }
+
+        function LoadInterviews() {
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetUpcomingInterviews",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    allInterviews = msg.d || [];
+                    DisplayInterviews();
+                    UpdateReminderSummaryCards();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load upcoming interviews.", "error");
+                    UpdateReminderSummaryCards();
+                }
+            });
+        }
 
         /*
             Updates the four summary cards.
         */
-
         function UpdateReminderSummaryCards() {
-
             var today = GetTodayWithoutTime();
 
             var weekFromToday = new Date(
@@ -46,13 +87,14 @@
                 today.getDate() + 7
             );
 
+            var currentDateTime = new Date();
+
             var followUpsToday = 0;
             var followUpsThisWeek = 0;
             var overdueFollowUps = 0;
             var upcomingInterviews = 0;
 
             allFollowUps.forEach(function (followUp) {
-
                 var followUpDate = GetDateWithoutTime(followUp.FollowUpDate);
 
                 if (!followUpDate) {
@@ -73,11 +115,10 @@
             });
 
             allInterviews.forEach(function (interview) {
+                var interviewDateTime = ParseServiceDate(interview.InterviewDate);
 
-                var interviewDate = GetDateWithoutTime(interview.InterviewDate);
-
-                if (interviewDate &&
-                    interviewDate >= today &&
+                if (interviewDateTime &&
+                    interviewDateTime >= currentDateTime &&
                     interview.InterviewStatus == "Scheduled") {
                     upcomingInterviews++;
                 }
@@ -95,30 +136,21 @@
         */
 
         function DisplayFollowUps() {
-
             var selectedType = $("#followUpTypeFilter").val();
             var selectedStatus = $("#followUpStatusFilter").val();
             var selectedSort = $("#followUpSort").val();
 
             var filteredFollowUps = allFollowUps.filter(function (followUp) {
-
-                var matchesType =
-                    selectedType == "All" ||
-                    followUp.FollowUpType == selectedType;
-
+                var matchesType = selectedType == "All" || followUp.FollowUpType == selectedType;
                 var currentStatus = GetFollowUpStatus(followUp.FollowUpDate);
+                var matchesStatus = selectedStatus == "All" || currentStatus == selectedStatus;
 
-                var matchesStatus =
-                    selectedStatus == "All" ||
-                    currentStatus == selectedStatus;
-
-                return (matchesType && matchesStatus);
+                return matchesType && matchesStatus;
             });
 
             filteredFollowUps.sort(function (firstFollowUp, secondFollowUp) {
-
-                var firstDate = GetDateValue(firstFollowUp.FollowUpDate);
-                var secondDate = GetDateValue(secondFollowUp.FollowUpDate);
+                var firstDate = GetDateTimeValue(firstFollowUp.FollowUpDate);
+                var secondDate = GetDateTimeValue(secondFollowUp.FollowUpDate);
 
                 if (selectedSort == "latest") {
                     return secondDate - firstDate;
@@ -128,56 +160,36 @@
             });
 
             var tableBody = $("#followUpsTableBody");
-
             tableBody.empty();
 
             if (filteredFollowUps.length == 0) {
-                tableBody.append(
-                    "<tr>" +
-                    "<td colspan='6' class='emptyTableMessage'>" +
-                    "No follow-ups were found." +
-                    "</td>" +
-                    "</tr>"
-                );
-
+                tableBody.append("<tr><td colspan='6' class='emptyTableMessage'>No follow-ups were found.</td></tr>");
                 return;
             }
 
             filteredFollowUps.forEach(function (followUp) {
-
                 var followUpStatus = GetFollowUpStatus(followUp.FollowUpDate);
 
                 var row =
                     "<tr>" +
-                    "<td>" +
-                    FormatDate(followUp.FollowUpDate) +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildFollowUpTypeBadge(followUp.FollowUpType) +
-                    "</td>" +
-
-                    "<td>" +
-                    "<strong>" +
-                    EscapeHtml(followUp.FollowUpName) +
-                    "</strong>" +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildApplicationLink(
-                        followUp.ApplicationId,
-                        followUp.CompanyName,
-                        followUp.ApplicationName
-                    ) +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildFollowUpStatusBadge(followUpStatus) +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildFollowUpActions(followUp) +
-                    "</td>" +
+                        "<td>" +
+                            FormatDate(followUp.FollowUpDate) +
+                        "</td>" +
+                        "<td>" +
+                            BuildFollowUpTypeBadge(followUp.FollowUpType) +
+                        "</td>" +
+                        "<td>" +
+                            "<strong>" + EscapeHtml(followUp.FollowUpName) + "</strong>" +
+                        "</td>" +
+                        "<td>" +
+                            BuildApplicationLink(followUp.ApplicationId, followUp.CompanyName, followUp.ApplicationName) +
+                        "</td>" +
+                        "<td>" +
+                            BuildFollowUpStatusBadge(followUpStatus) +
+                        "</td>" +
+                        "<td>" +
+                            BuildFollowUpActions(followUp) +
+                        "</td>" +
                     "</tr>";
 
                 tableBody.append(row);
@@ -190,94 +202,55 @@
         */
 
         function DisplayInterviews() {
-
             var interviews = allInterviews.slice();
 
             interviews.sort(function (firstInterview, secondInterview) {
-                return (
-                    GetDateTimeValue(
-                        firstInterview.InterviewDate,
-                        firstInterview.InterviewTime
-                    ) -
-                    GetDateTimeValue(
-                        secondInterview.InterviewDate,
-                        secondInterview.InterviewTime
-                    )
-                );
+                return GetDateTimeValue(firstInterview.InterviewDate) - GetDateTimeValue(secondInterview.InterviewDate);
             });
 
             var tableBody = $("#interviewsTableBody");
-
             tableBody.empty();
 
             if (interviews.length == 0) {
-                tableBody.append(
-                    "<tr>" +
-                    "<td colspan='8' class='emptyTableMessage'>" +
-                    "No interviews are scheduled." +
-                    "</td>" +
-                    "</tr>"
-                );
-
+                tableBody.append("<tr><td colspan='8' class='emptyTableMessage'>No interviews are scheduled.</td></tr>");
                 return;
             }
 
             interviews.forEach(function (interview) {
+                var interviewerName = interview.InterviewerName || interview.RecruiterName || "—";
+                var recruiterName = "";
+
+                if (interview.InterviewerName && interview.RecruiterName) 
+                    {recruiterName = interview.RecruiterName;}
 
                 var row =
                     "<tr>" +
-                    "<td>" +
-                    "<strong>" +
-                    FormatDate(interview.InterviewDate) +
-                    "</strong>" +
-
-                    "<span class='secondaryTableText'>" +
-                    FormatTime(interview.InterviewTime) +
-                    "</span>" +
-                    "</td>" +
-
-                    "<td>" +
-                    "<strong>" +
-                    EscapeHtml(interview.InterviewTitle) +
-                    "</strong>" +
-
-                    "<span class='secondaryTableText'>" +
-                    interview.DurationMinutes +
-                    " minutes" +
-                    "</span>" +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildApplicationLink(
-                        interview.ApplicationId,
-                        interview.CompanyName,
-                        interview.ApplicationName
-                    ) +
-                    "</td>" +
-
-                    "<td>" +
-                    EscapeHtml(interview.InterviewerName || "—") +
-
-                    "<span class='secondaryTableText'>" +
-                    EscapeHtml(interview.InterviewerRole || "") +
-                    "</span>" +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildInterviewTypeBadge(interview.InterviewType) +
-                    "</td>" +
-
-                    "<td class='locationCell'>" +
-                    EscapeHtml(interview.LocationOrLink || "—") +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildInterviewStatusBadge(interview.InterviewStatus) +
-                    "</td>" +
-
-                    "<td>" +
-                    BuildInterviewActions(interview.InterviewId) +
-                    "</td>" +
+                        "<td>" +
+                            "<strong>" + FormatInterviewDate(interview.InterviewDate) + "</strong>" +
+                            "<span class='secondaryTableText'>" + FormatInterviewTime(interview.InterviewDate) + "</span>" +
+                        "</td>" +
+                        "<td>" +
+                            "<strong>" + EscapeHtml(interview.InterviewTitle || "Interview") + "</strong>" +
+                        "</td>" +
+                        "<td>" +
+                            BuildApplicationLink(interview.ApplicationId, interview.CompanyName, interview.ApplicationName) +
+                        "</td>" +
+                        "<td>" +
+                            EscapeHtml(interviewerName) +
+                            (recruiterName ? "<span class='secondaryTableText'>" + EscapeHtml(recruiterName) + "</span>" : "") +
+                        "</td>" +
+                        "<td>" +
+                            BuildInterviewTypeBadge(interview.InterviewType) +
+                        "</td>" +
+                        "<td class='locationCell'>" +
+                            EscapeHtml(interview.LocationOrLink || "—") +
+                        "</td>" +
+                        "<td>" +
+                            BuildInterviewStatusBadge(interview.InterviewStatus) +
+                        "</td>" +
+                        "<td>" +
+                            BuildInterviewActions(interview) +
+                        "</td>" +
                     "</tr>";
 
                 tableBody.append(row);
@@ -345,10 +318,12 @@
 
 
         function BuildInterviewTypeBadge(interviewType) {
+            var typeClass = "interviewOther";
 
-            var typeClass = "interviewPhone";
-
-            if (interviewType == "Video") {
+            if (interviewType == "Phone") {
+                typeClass = "interviewPhone";
+            }
+            else if (interviewType == "Video") {
                 typeClass = "interviewVideo";
             }
             else if (interviewType == "Onsite") {
@@ -382,7 +357,7 @@
             return (
                 "<a class='tableLink' href='application-details.html?applicationId=" +
                 applicationId +
-                "'>" +
+                "&source=reminders'>" +
                 EscapeHtml(companyName || "Application") +
                 "</a>" +
 
@@ -394,83 +369,96 @@
 
 
         function BuildFollowUpActions(followUp) {
-
-            var viewPage =
-                followUp.FollowUpType == "Recruiter"
-                    ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId
-                    : "application-details.html?applicationId=" + followUp.RelatedId;
+            var viewPage = "application-details.html?applicationId=" + followUp.ApplicationId + "&source=reminders";
 
             var editPage =
                 followUp.FollowUpType == "Recruiter"
                     ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId
-                    : "edit-application.html?applicationId=" + followUp.RelatedId;
+                    : "edit-application.html?applicationId=" + followUp.ApplicationId + "&source=reminders";
 
             return (
                 "<div class='rowActions'>" +
-                "<a class='tableLink' href='" + viewPage + "'>" +
-                "View" +
-                "</a>" +
-
-                "<a class='tableLink' href='" + editPage + "'>" +
-                "Edit" +
-                "</a>" +
+                    "<a class='tableLink' href='" + viewPage + "'>View</a>" +
+                    "<a class='tableLink' href='" + editPage + "'>Edit</a>" +
                 "</div>"
             );
         }
 
 
-        function BuildInterviewActions(interviewId) {
-
+        function BuildInterviewActions(interview) {
             return (
                 "<div class='rowActions'>" +
-                "<a class='tableLink' href='edit-interview.html?interviewId=" +
-                interviewId +
-                "'>" +
-                "Edit" +
-                "</a>" +
-
-                "<button type='button' class='deleteTextButton' onclick='DeleteInterview(" +
-                interviewId +
-                ");'>" +
-                "Delete" +
-                "</button>" +
+                    "<a class='tableLink' href='application-details.html?applicationId=" + interview.ApplicationId + "&source=reminders'>View</a>" +
+                    "<a class='tableLink' href='edit-interview.html?interviewId=" + interview.InterviewId + "'>Edit</a>" +
+                    "<button type='button' class='deleteTextButton' onclick='DeleteInterview(" + interview.InterviewId + ");'>Delete</button>" +
                 "</div>"
             );
         }
 
 
         /*
-            Placeholder interview deletion.
+            Deletes an interview.
         */
 
         function DeleteInterview(interviewId) {
-
-            var confirmed = confirm("Delete this interview?");
+            var confirmed = confirm("Are you sure you want to delete this interview?");
 
             if (!confirmed) {
                 return;
             }
 
-            allInterviews = allInterviews.filter(function (interview) {
-                return interview.InterviewId != interviewId;
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/DeleteInterview",
+                data: JSON.stringify({
+                    interviewId: interviewId
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d) {
+                        ShowPageMessage("Interview deleted successfully.", "success");
+                        LoadInterviews();
+                    }
+                    else {
+                        ShowPageMessage("Unable to delete the interview.", "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to delete the interview.", "error");
+                }
             });
-
-            DisplayInterviews();
-            UpdateReminderSummaryCards();
-
-            ShowPageMessage(
-                "Interview removed from the placeholder list.",
-                "success"
-            );
         }
 
 
         /*
-            Date helpers.
+            Date and time helpers.
         */
 
-        function GetTodayWithoutTime() {
+        function ParseDateOnly(value) {
+            if (!value) {
+                return null;
+            }
 
+            var parts = value.split("-");
+
+            if (parts.length != 3) {
+                return null;
+            }
+
+            var date = new Date(
+                parseInt(parts[0]),
+                parseInt(parts[1]) - 1,
+                parseInt(parts[2])
+            );
+
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function GetTodayWithoutTime() {
             var today = new Date();
 
             return new Date(
@@ -480,79 +468,90 @@
             );
         }
 
-
-        function GetDateWithoutTime(value) {
-
+        function ParseDateTime(value) {
             if (!value) {
                 return null;
             }
 
-            var date = new Date(value + "T00:00:00");
+            var parts = value.split(/[ T]/);
 
-            if (isNaN(date.getTime())) {
+            if (parts.length != 2) {
                 return null;
             }
 
-            return date;
-        }
+            var dateParts = parts[0].split("-");
+            var timeParts = parts[1].split(":");
 
-
-        function GetDateValue(value) {
-
-            var date = GetDateWithoutTime(value);
-
-            return date
-                ? date.getTime()
-                : 0;
-        }
-
-
-        function GetDateTimeValue(dateValue, timeValue) {
-
-            if (!dateValue) {
-                return 0;
+            if (dateParts.length != 3 || timeParts.length < 2) {
+                return null;
             }
 
             var dateTime = new Date(
-                dateValue +
-                "T" +
-                (timeValue || "00:00") +
-                ":00"
+                parseInt(dateParts[0]),
+                parseInt(dateParts[1]) - 1,
+                parseInt(dateParts[2]),
+                parseInt(timeParts[0]),
+                parseInt(timeParts[1]),
+                parseInt(timeParts[2] || "0")
             );
 
-            if (isNaN(dateTime.getTime())) {
-                return 0;
-            }
-
-            return dateTime.getTime();
+            return isNaN(dateTime.getTime()) ? null : dateTime;
         }
 
 
-        function FormatTime(value) {
+        function GetDateWithoutTime(value) {
+            return ParseDateOnly(value);
+        }
 
-            if (!value) {
+
+        function GetDateTimeValue(value) {
+            var dateTime = ParseDateTime(value);
+
+            return dateTime ? dateTime.getTime() : 0;
+        }
+
+        function FormatDate(value) {
+            var date = ParseDateOnly(value);
+
+            if (!date) {
                 return "—";
             }
 
-            var pieces = value.split(":");
-            var date = new Date();
-
-            date.setHours(
-                Number(pieces[0]),
-                Number(pieces[1]),
-                0,
-                0
-            );
-
-            return date.toLocaleTimeString(
-                [],
-                {
-                    hour: "numeric",
-                    minute: "2-digit"
-                }
-            );
+            return date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+            });
         }
 
+
+        function FormatInterviewDate(value) {
+            var dateTime = ParseDateTime(value);
+
+            if (!dateTime) {
+                return "—";
+            }
+
+            return dateTime.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+            });
+        }
+
+
+        function FormatInterviewTime(value) {
+            var dateTime = ParseDateTime(value);
+
+            if (!dateTime) {
+                return "—";
+            }
+
+            return dateTime.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit"
+            });
+        }
     </script>
 
     <style>
@@ -839,6 +838,11 @@
             color: #7c3aed;
         }
 
+        .interviewOther {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
+
         .interviewStatusBadge {
             background-color: #dbeafe;
             color: #1d4ed8;
@@ -874,6 +878,11 @@
             margin: 0;
             color: #64748b;
             font-size: 13px;
+        }
+
+        .interviewOther {
+            background-color: #f1f5f9;
+            color: #475569;
         }
     </style>
 </head>

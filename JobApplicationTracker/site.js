@@ -90,3 +90,91 @@ function LoadAccountInformation() {
         }
     });
 }
+
+function GoBackOrDefault(defaultPage) {
+    var parameters = new URLSearchParams(window.location.search);
+    var source = parameters.get("source");
+
+    if (source == "reminders") {
+        window.location.href = "reminder-interviews.html";
+        return;
+    }
+
+    if (source == "recruiters") {
+        window.location.href = "view-recruiters.html";
+        return;
+    }
+
+    if (source == "search") {
+        window.location.href = "search.html";
+        return;
+    }
+
+    if (source == "applications") {
+        window.location.href = "view-applications.html";
+        return;
+    }
+
+    window.location.href = defaultPage;
+}
+
+function GetNavigationSource() {
+    var parameters = new URLSearchParams(window.location.search);
+    var source = parameters.get("source");
+
+    if (source == "reminders") {
+        return {
+            Page: "reminder-interviews.html",
+            Label: "Reminders & Interviews"
+        };
+    }
+
+    if (source == "search") {
+        return {
+            Page: "search.html",
+            Label: "Search & Filter"
+        };
+    }
+
+    if (source == "recruiters") {
+        return {
+            Page: "view-recruiters.html",
+            Label: "Recruiters"
+        };
+    }
+
+    if (source == "documents") {
+        return {
+            Page: "view-documents.html",
+            Label: "Documents"
+        };
+    }
+
+    if (source == "applications") {
+        return {
+            Page: "view-applications.html",
+            Label: "Applications"
+        };
+    }
+
+    if (source == "home") {
+        return {
+            Page: "home-page.html",
+            Label: "Home"
+        };
+    }
+
+    return null;
+}
+
+function UpdatePageNavigation() {
+    var navigationSource = GetNavigationSource();
+
+    if (!navigationSource) {
+        return;
+    }
+
+    $("#sourceBreadcrumb")
+        .attr("href", navigationSource.Page)
+        .text(navigationSource.Label);
+}

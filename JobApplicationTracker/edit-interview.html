@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
 
     <meta name="description"
-          content="Add an interview connected to a saved job application." />
+          content="Edit an interview connected to a saved job application." />
 
-    <title>Add Interview - In Formation Jobs</title>
+    <title>Edit Interview - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
@@ -15,15 +15,23 @@
     <script>
         var applications = [];
         var recruiters = [];
+        var currentInterview = null;
+        var interviewId = 0;
 
 
         $(document).ready(function () {
             LoadAccountInformation();
-            LoadApplicationOptions();
-            LoadRecruiters();
+
+            var parameters = new URLSearchParams(window.location.search);
+            interviewId = parseInt(parameters.get("interviewId"), 10);
+
+            if (!interviewId) {
+                ShowPageMessage("A valid interview is required.", "error");
+                $("#saveInterviewButton").prop("disabled", true);
+                return;
+            }
 
             $("#applicationId").on("change", UpdateRecruiterOptions);
-
             $("#recruiterId").on("change", FillInterviewerName);
 
             $("#interviewForm").on("submit", function (event) {
@@ -31,7 +39,11 @@
                 SaveInterview();
             });
 
-            $("#clearInterviewForm").on("click", ClearInterviewForm);
+            $("#clearInterviewForm").on("click", ResetInterviewForm);
+
+            LoadApplicationOptions();
+            LoadRecruiters();
+            LoadInterview()
         });
 
 
@@ -66,6 +78,8 @@
                         ShowPageMessage("You need to add an application before scheduling an interview.", "error");
                         $("#saveInterviewButton").prop("disabled", true);
                     }
+
+                    PopulateInterviewForm();
                 },
 
                 error: function (xhr) {
@@ -89,6 +103,8 @@
                     if ($("#applicationId").val()) {
                         UpdateRecruiterOptions();
                     }
+
+                    PopulateInterviewForm();
                 },
 
                 error: function (xhr) {
@@ -97,6 +113,77 @@
                     ShowPageMessage("Unable to load your recruiters.", "error");
                 }
             });
+        }
+
+        /*
+            Loads the interview being edited.
+        */
+
+        function LoadInterview() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetInterview",
+                data: JSON.stringify({
+                    interviewId: interviewId
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (!msg.d) {
+                        ShowPageMessage("The interview could not be found.", "error");
+                        $("#saveInterviewButton").prop("disabled", true);
+                        return;
+                    }
+
+                    currentInterview = msg.d;
+                    PopulateInterviewForm();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load the interview.", "error");
+                    $("#saveInterviewButton").prop("disabled", true);
+                }
+            });
+        }
+
+        /*
+            Populates the form with the saved interview values.
+        */
+
+        function PopulateInterviewForm() {
+            if (!currentInterview ||
+                applications.length == 0 ||
+                recruiters == null) {
+                return;
+            }
+
+            $("#applicationId").val(currentInterview.ApplicationId);
+
+            UpdateRecruiterOptions();
+
+            $("#recruiterId").val(
+                currentInterview.RecruiterId
+                    ? currentInterview.RecruiterId
+                    : ""
+            );
+
+            $("#interviewTitle").val(currentInterview.InterviewTitle);
+            $("#interviewType").val(currentInterview.InterviewType);
+
+            var dateTimeParts = currentInterview.InterviewDate.split(" ");
+
+            $("#interviewDate").val(dateTimeParts[0]);
+
+            if (dateTimeParts.length > 1) {
+                $("#interviewTime").val(dateTimeParts[1].substring(0, 5));
+            }
+
+            $("#interviewerName").val(currentInterview.InterviewerName);
+            $("#locationOrLink").val(currentInterview.LocationOrLink);
+            $("#interviewNotes").val(currentInterview.Notes);
+            $("#interviewStatus").val(currentInterview.InterviewStatus);
         }
 
         /*
@@ -167,10 +254,9 @@
                 (recruiter.FirstName + " " + recruiter.LastName).trim()
             );
         }
-        
+
         /*
-            Saves the interview and links it to the selected application
-            and optional recruiter.
+            Updates the interview with the entered information.
         */
 
         function SaveInterview() {
@@ -187,6 +273,7 @@
             var interviewDateTime = $("#interviewDate").val() + " " + $("#interviewTime").val() + ":00";
 
             var parameters = JSON.stringify({
+                interviewId: interviewId,
                 applicationId: parseInt($("#applicationId").val(), 10),
                 recruiterId: $("#recruiterId").val() ? parseInt($("#recruiterId").val(), 10) : null,
                 interviewTitle: $("#interviewTitle").val().trim(),
@@ -194,20 +281,21 @@
                 interviewDate: interviewDateTime,
                 interviewerName: $("#interviewerName").val().trim(),
                 locationOrLink: $("#locationOrLink").val().trim(),
-                notes: $("#interviewNotes").val().trim()
+                notes: $("#interviewNotes").val().trim(),
+                interviewStatus: $("#interviewStatus").val()
             });
 
             $.ajax({
                 type: "POST",
-                url: "ProjectServices.asmx/AddInterview",
+                url: "ProjectServices.asmx/UpdateInterview",
                 data: parameters,
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
 
                 success: function (msg) {
                     if (msg.d == "Success") {
-                        ClearInterviewForm();
-                        ShowPageMessage("Interview saved successfully.", "success");
+                        ShowPageMessage("Interview updated successfully.", "success");
+                        LoadInterview();
                     }
                     else {
                         ShowPageMessage(msg.d, "error");
@@ -216,7 +304,7 @@
 
                 error: function (xhr) {
                     console.log(xhr.responseText);
-                    ShowPageMessage("Unable to save the interview. Check the browser console.", "error");
+                    ShowPageMessage("Unable to update the interview. Check the browser console.", "error");
                 },
 
                 complete: function () {
@@ -230,21 +318,9 @@
             Restores every field to its default value.
         */
 
-        function ClearInterviewForm() {
-
-            document.getElementById("interviewForm").reset();
-
-            $("#recruiterId")
-                .empty()
-                .append(
-                    $("<option>")
-                        .val("")
-                        .text("Select an application first")
-                )
-                .prop("disabled", true);
-
+        function ResetInterviewForm() {
             ClearPageMessage();
-            $("#applicationId").focus();
+            PopulateInterviewForm();
         }
     </script>
 
@@ -431,7 +507,7 @@
             <span>&gt;</span>
 
             <span>
-                Add Interview
+                Edit Interview
             </span>
 
         </nav>
@@ -593,6 +669,18 @@
                                maxlength="500"
                                placeholder="Enter address, phone number, or meeting link" />
 
+                    </div>
+
+                    <div class="formField">
+                        <label for="interviewStatus">
+                            Interview Status
+                        </label>
+
+                        <select id="interviewStatus">
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
                     </div>
 
                     <div class="formField fullWidthField">
