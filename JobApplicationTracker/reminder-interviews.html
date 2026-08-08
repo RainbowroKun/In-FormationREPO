@@ -373,7 +373,7 @@
 
             var editPage =
                 followUp.FollowUpType == "Recruiter"
-                    ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId
+                    ? "edit-recruiter.html?recruiterId=" + followUp.RelatedId + "&source=reminders"
                     : "edit-application.html?applicationId=" + followUp.ApplicationId + "&source=reminders";
 
             return (

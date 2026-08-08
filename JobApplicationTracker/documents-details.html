@@ -11,9 +11,13 @@
 
     <script>
         var documentId = 0;
+        var allApplications = [];
+        var linkedApplicationIds = [];
 
         $(document).ready(function () {
             LoadAccountInformation();
+            UpdatePageNavigation();
+
             documentId = GetDocumentIdFromUrl();
 
             if (documentId <= 0) {
@@ -21,13 +25,13 @@
                 return;
             }
 
-            $("#downloadDocumentButton").attr(
-                "href",
-                "DownloadDocument.ashx?documentId=" + documentId
-            );
+            $("#downloadDocumentButton")
+                .attr("href", "DownloadDocument.ashx?documentId=" + documentId);
+
+            $("#linkApplicationButton").on("click", LinkApplication);
 
             LoadDocumentDetails();
-            UpdatePageNavigation();
+            LoadApplicationOptions();
         });
 
         function GetDocumentIdFromUrl() {
@@ -51,12 +55,146 @@
                     }
 
                     DisplayDocument(msg.d);
-                    DisplayApplications(msg.d.Applications || []);
+
+                    var linkedApplications = msg.d.Applications || [];
+
+                    linkedApplicationIds = linkedApplications.map(function (application) {
+                        return application.ApplicationId;
+                    });
+
+                    DisplayApplications(linkedApplications);
+                    UpdateApplicationOptions();
                 },
 
                 error: function (xhr) {
                     console.log(xhr.responseText);
                     ShowPageMessage("Unable to load document details.", "error");
+                }
+            });
+        }
+
+        function LoadApplicationOptions() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplications",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    allApplications = msg.d || [];
+                    UpdateApplicationOptions();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load applications.", "error");
+                }
+            });
+        }
+
+
+        function UpdateApplicationOptions() {
+            var applicationSelect = $("#linkApplicationId");
+            applicationSelect.empty();
+
+            applicationSelect.append(
+                "<option value=''>Select an application...</option>"
+            );
+
+            allApplications.forEach(function (application) {
+                if (!linkedApplicationIds.includes(application.ApplicationId)) {
+                    applicationSelect.append(
+                        $("<option>")
+                            .val(application.ApplicationId)
+                            .text(application.CompanyName + " — " + application.JobTitle)
+                    );
+                }
+            });
+
+            $("#linkApplicationButton").prop(
+                "disabled",
+                applicationSelect.find("option").length <= 1
+            );
+        }
+
+
+        function LinkApplication() {
+            var applicationId = parseInt($("#linkApplicationId").val(), 10);
+
+            if (!applicationId) {
+                ShowPageMessage("Please select an application to link.", "error");
+                return;
+            }
+
+            ClearPageMessage();
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId,
+                documentId: documentId,
+                applicationNotes: $("#linkApplicationNotes").val().trim()
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/LinkApplicationDocument",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application linked successfully.", "success");
+                        $("#linkApplicationId").val("");
+                        $("#linkApplicationNotes").val("");
+                        LoadDocumentDetails();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to link the application.", "error");
+                }
+            });
+        }
+
+        function UnlinkApplication(applicationId) {
+            var confirmed = confirm(
+                "Are you sure you want to unlink this application from the document?"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId,
+                documentId: documentId
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/UnlinkApplicationDocument",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application unlinked successfully.", "success");
+                        LoadDocumentDetails();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to unlink the application.", "error");
                 }
             });
         }
@@ -99,8 +237,16 @@
                     "<td><span class='statusBadge'>" + EscapeHtml(status) + "</span></td>" +
                     "<td>" + EscapeHtml(application.ApplicationNotes || "—") + "</td>" +
                     "<td>" + FormatDate(application.LinkedAt) + "</td>" +
-                    "<td><a class='tableLink' href='edit-application.html?applicationId=" +
-                        application.ApplicationId + "'>Open Application</a></td>" +
+                    "<td>" +
+                        "<div class='rowActions'>" +
+                            "<a class='tableLink' href='application-details.html?applicationId=" +
+                                application.ApplicationId +
+                                "&source=documents'>View</a>" +
+                            "<button type='button' class='unlinkButton' onclick='UnlinkApplication(" +
+                                application.ApplicationId +
+                                ");'>Unlink</button>" +
+                        "</div>" +
+                    "</td>" +
                     "</tr>";
 
                 tableBody.append(row);
@@ -279,6 +425,61 @@
             color: #64748b !important;
             text-align: center !important;
         }
+
+        .linkApplicationArea {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 18px;
+            align-items: end;
+            margin-bottom: 20px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            background-color: #f8fafc;
+        }
+
+        .linkApplicationArea .formField {
+            margin-bottom: 0;
+        }
+
+        .linkApplicationArea label {
+            display: block;
+            margin-bottom: 7px;
+            color: #475569;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .linkApplicationArea input,
+        .linkApplicationArea select {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background-color: white;
+            color: #334155;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .linkApplicationArea .primaryButton {
+            min-height: 42px;
+            white-space: nowrap;
+        }
+
+        .unlinkButton {
+            padding: 0;
+            border: none;
+            background: none;
+            color: #dc2626;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .unlinkButton:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -364,6 +565,33 @@
                 Linked Applications
                 <span class="applicationCount" id="applicationCount">0</span>
             </h3>
+
+            <div class="linkApplicationArea">
+
+                <div class="formField">
+                    <label for="linkApplicationId">Application</label>
+
+                    <select id="linkApplicationId">
+                        <option value="">Loading applications...</option>
+                    </select>
+                </div>
+
+                <div class="formField">
+                    <label for="linkApplicationNotes">Link Notes</label>
+
+                    <input type="text"
+                        id="linkApplicationNotes"
+                        maxlength="500"
+                        placeholder="Optional notes about this document..." />
+                </div>
+
+                <button type="button"
+                        id="linkApplicationButton"
+                        class="primaryButton">
+                    Link Application
+                </button>
+
+            </div>
 
             <div class="tableWrapper">
                 <table class="applicationsTable">

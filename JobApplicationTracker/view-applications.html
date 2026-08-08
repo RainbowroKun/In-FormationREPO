@@ -233,7 +233,7 @@
                             "</td>" +
 
                             "<td>" +
-                                BuildApplicationActions(application.ApplicationId, application.isArchived) +
+                                BuildApplicationActions(application.ApplicationId, application.IsArchived) +
                             "</td>" +
 
                         "</tr>";
@@ -245,13 +245,9 @@
             $("#applicationCountMessage").text(
                 "Showing " +
                 filteredApplications.length +
-                " application." +
-
-                (
-                    filteredApplications.length == 1
-                        ? "." 
-                        : "s."
-                )
+                (filteredApplications.length == 1
+                    ? " application."
+                    : " applications.")
             );
         }
 
@@ -288,46 +284,39 @@
         }
 
         function BuildApplicationActions(applicationId, isArchived) {
-            var archiveText = isArchived == true
+            var archiveText =
+                isArchived == true
                     ? "Unarchive"
                     : "Archive";
 
             return (
                 "<div class='actionArea'>" +
-
-                    "<a class='actionLink' href='application-details.html?applicationId=" + applicationId + "'>" +
-                        "Details" +
-                    "</a>" +
-
-                    "<a class='actionLink' href='edit-application.html?applicationId=" + applicationId + "'>" +
-                        "Edit" +
-                    "</a>" +
-
+                    "<a class='actionLink' href='application-details.html?applicationId=" +
+                        applicationId +
+                        "&source=applications'>Details</a>" +
+                    "<a class='actionLink' href='edit-application.html?applicationId=" +
+                        applicationId +
+                        "&source=applications'>Edit</a>" +
                     "<div class='moreMenuWrapper'>" +
-
-                        "<button type='button' class='moreButton' onclick='ToggleMoreMenu(" + applicationId + ");'>" +
-                            "&hellip;" +
-                        "</button>" +
-
-                        "<div class='moreMenu' id='moreMenu" + applicationId + "'>" +
-
-                            "<button type='button' onclick='ToggleArchiveApplication(" + applicationId + ");'>" +
+                        "<button type='button' class='moreButton' onclick='ToggleMoreMenu(" +
+                            applicationId +
+                            ");'>&hellip;</button>" +
+                        "<div class='moreMenu' id='moreMenu" +
+                            applicationId +
+                            "'>" +
+                            "<button type='button' onclick='ToggleArchiveApplication(" +
+                                applicationId +
+                                ");'>" +
                                 archiveText +
                             "</button>" +
-
-                            "<button type='button' class='deleteAction' onclick='DeleteApplication(" + applicationId + ");'>" +
-                                "Delete" +
-                            "</button>" +
-
+                            "<button type='button' class='deleteAction' onclick='DeleteApplication(" +
+                                applicationId +
+                                ");'>Delete</button>" +
                         "</div>" +
-
                     "</div>" +
-
                 "</div>"
             );
         }
-
-
         function ToggleMoreMenu(applicationId) {
 
             var selectedMenu = "#moreMenu" + applicationId;
@@ -381,23 +370,71 @@
         }
 
         function ToggleArchiveApplication(applicationId) {
+            $(".moreMenu").hide();
 
-        $(".moreMenu").hide();
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/ToggleApplicationArchive",
+                data: JSON.stringify({
+                    applicationId: applicationId
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-        alert(
-            "Archive and unarchive will be connected when we add the ProjectServices methods. " +
-            "Application ID: " +
-            applicationId
-        );
-    }
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application archive status updated successfully.", "success");
+                        LoadApplications();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to update the application.", "error");
+                }
+            });
+        }
 
         function DeleteApplication(applicationId) {
             $(".moreMenu").hide();
 
-            alert("Delete will be connected when we add the ProjectServices method. " +
-                "Application ID: " +
-                applicationId
+            var confirmed = confirm(
+                "Are you sure you want to delete this application? " +
+                "Its interviews and recruiter contacts will also be deleted. " +
+                "Linked documents will remain in Documents."
             );
+
+            if (!confirmed) {
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/DeleteApplication",
+                data: JSON.stringify({
+                    applicationId: applicationId
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        LoadApplications();
+                        ShowPageMessage("Application deleted successfully.", "success");
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to delete the application.", "error");
+                }
+            });
         }
 
         function ClearApplicationFilters() {
@@ -749,229 +786,229 @@
     </style>
 </head>
 
-<body>
+    <body>
 
-    <header>
+        <header>
 
-        <div>
-            <h1>In Formation Jobs</h1>
-
-            <p>
-                Keep your job search organized and moving forward.
-            </p>
-        </div>
-
-        <div class="accountArea">
-
-            <p id="welcomeMessage">
-                Loading account...
-            </p>
-
-            <div id="signedInArea">
-
-                <a class="accountLink"
-                   href="#"
-                   onclick="LogOut(); return false;">
-                    Log Out
-                </a>
-
-            </div>
-
-        </div>
-
-    </header>
-
-    <div class="pageWrapper">
-
-        <nav class="pageNav">
-            <a href="home-page.html">Home</a>
-            <span>&gt;</span>
-            <span>View Applications</span>
-        </nav>
-        <div class="pageHeadingRow">
-
-            <div class="pageHeading">
-                <h2>View Applications</h2>
+            <div>
+                <h1>In Formation Jobs</h1>
 
                 <p>
-                    Review, open, and manage your saved job applications.
+                    Keep your job search organized and moving forward.
                 </p>
             </div>
 
-                <a class="primaryButton addApplicationButton"
-                   href="add-application.html">
-                    Add Application
-                </a>
+            <div class="accountArea">
+
+                <p id="welcomeMessage">
+                    Loading account...
+                </p>
+
+                <div id="signedInArea">
+
+                    <a class="accountLink"
+                    href="#"
+                    onclick="LogOut(); return false;">
+                        Log Out
+                    </a>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <div class="pageWrapper">
+
+            <nav class="pageNav">
+                <a href="home-page.html">Home</a>
+                <span>&gt;</span>
+                <span>View Applications</span>
+            </nav>
+            <div class="pageHeadingRow">
+
+                <div class="pageHeading">
+                    <h2>View Applications</h2>
+
+                    <p>
+                        Review, open, and manage your saved job applications.
+                    </p>
+                </div>
+
+                    <a class="primaryButton addApplicationButton"
+                    href="add-application.html">
+                        Add Application
+                    </a>
+
+            </div>
+
+            <section class="summaryGrid">
+
+                <div class="summaryCard activeCard">
+                    <h3>Active Applications</h3>
+                    <p id="activeApplicationCount">0</p>
+                </div>
+
+                <div class="summaryCard interviewCard">
+                    <h3>Interviews</h3>
+                    <p id="interviewCount">0</p>
+                </div>
+
+                <div class="summaryCard offerCard">
+                    <h3>Offers</h3>
+                    <p id="offerCount">0</p>
+                </div>
+
+                <div class="summaryCard rejectedCard">
+                    <h3>Rejected</h3>
+                    <p id="rejectedCount">0</p>
+                </div>
+
+                <div class="summaryCard archivedCard">
+                    <h3>Archived</h3>
+                    <p id="archivedCount">0</p>
+                </div>
+
+            </section>
+
+            <main class="applicationsCard">
+
+                <div class="tableControls">
+
+                    <div class="formField">
+
+                        <label for="applicationSearch">
+                            Search Applications
+                        </label>
+
+                        <input type="search" id="applicationSearch" placeholder="Search company, job title, or location..." />
+
+                    </div>
+
+                    <div class="formField">
+
+                        <label for="statusFilter">
+                            Status
+                        </label>
+
+                        <select id="statusFilter">
+
+                            <option value="All">
+                                All Statuses
+                            </option>
+
+                            <option value="Applied">
+                                Applied
+                            </option>
+
+                            <option value="Interview">
+                                Interview
+                            </option>
+
+                            <option value="Offer">
+                                Offer
+                            </option>
+
+                            <option value="Rejected">
+                                Rejected
+                            </option>
+
+                            <option value="Archived">
+                                Archived
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="formField">
+
+                        <label for="applicationSort">
+                            Sort By
+                        </label>
+
+                        <select id="applicationSort">
+
+                            <option value="dateNewest">
+                                Date Applied (Newest)
+                            </option>
+
+                            <option value="dateOldest">
+                                Date Applied (Oldest)
+                            </option>
+
+                            <option value="companyAscending">
+                                Company (A-Z)
+                            </option>
+
+                            <option value="companyDescending">
+                                Company (Z-A)
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="clearFiltersArea">
+
+                        <button type="button"
+                                id="clearApplicationFilters"
+                                class="secondaryButton">
+                            Clear Filters
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="tableWrapper">
+
+                    <table class="applicationsTable">
+
+                        <thead>
+
+                            <tr>
+                                <th>Company</th>
+                                <th>Job Title</th>
+                                <th>Location</th>
+                                <th>Date Applied</th>
+                                <th>Status</th>
+                                <th>Follow-Up</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="applicationsTableBody">
+
+                            <tr>
+
+                                <td colspan="8"
+                                    class="emptyTableMessage">
+                                    Loading applications...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <p id="pageMessage"></p>
+
+                <div class="tableFooter">
+
+                    <span id="applicationCountMessage">
+                        Showing 0 applications.
+                    </span>
+
+                </div>
+
+            </main>
 
         </div>
-
-        <section class="summaryGrid">
-
-            <div class="summaryCard activeCard">
-                <h3>Active Applications</h3>
-                <p id="activeApplicationCount">0</p>
-            </div>
-
-            <div class="summaryCard interviewCard">
-                <h3>Interviews</h3>
-                <p id="interviewCount">0</p>
-            </div>
-
-            <div class="summaryCard offerCard">
-                <h3>Offers</h3>
-                <p id="offerCount">0</p>
-            </div>
-
-            <div class="summaryCard rejectedCard">
-                <h3>Rejected</h3>
-                <p id="rejectedCount">0</p>
-            </div>
-
-            <div class="summaryCard archivedCard">
-                <h3>Archived</h3>
-                <p id="archivedCount">0</p>
-            </div>
-
-        </section>
-
-        <main class="applicationsCard">
-
-            <div class="tableControls">
-
-                <div class="formField">
-
-                    <label for="applicationSearch">
-                        Search Applications
-                    </label>
-
-                    <input type="search" id="applicationSearch" placeholder="Search company, job title, or location..." />
-
-                </div>
-
-                <div class="formField">
-
-                    <label for="statusFilter">
-                        Status
-                    </label>
-
-                    <select id="statusFilter">
-
-                        <option value="All">
-                            All Statuses
-                        </option>
-
-                        <option value="Applied">
-                            Applied
-                        </option>
-
-                        <option value="Interview">
-                            Interview
-                        </option>
-
-                        <option value="Offer">
-                            Offer
-                        </option>
-
-                        <option value="Rejected">
-                            Rejected
-                        </option>
-
-                        <option value="Archived">
-                            Archived
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div class="formField">
-
-                    <label for="applicationSort">
-                        Sort By
-                    </label>
-
-                    <select id="applicationSort">
-
-                        <option value="dateNewest">
-                            Date Applied (Newest)
-                        </option>
-
-                        <option value="dateOldest">
-                            Date Applied (Oldest)
-                        </option>
-
-                        <option value="companyAscending">
-                            Company (A-Z)
-                        </option>
-
-                        <option value="companyDescending">
-                            Company (Z-A)
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div class="clearFiltersArea">
-
-                    <button type="button"
-                            id="clearApplicationFilters"
-                            class="secondaryButton">
-                        Clear Filters
-                    </button>
-
-                </div>
-
-            </div>
-
-            <div class="tableWrapper">
-
-                <table class="applicationsTable">
-
-                    <thead>
-
-                        <tr>
-                            <th>Company</th>
-                            <th>Job Title</th>
-                            <th>Location</th>
-                            <th>Date Applied</th>
-                            <th>Status</th>
-                            <th>Follow-Up</th>
-                            <th>Last Updated</th>
-                            <th>Actions</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="applicationsTableBody">
-
-                        <tr>
-
-                            <td colspan="8"
-                                class="emptyTableMessage">
-                                Loading applications...
-                            </td>
-
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <p id="pageMessage"></p>
-
-            <div class="tableFooter">
-
-                <span id="applicationCountMessage">
-                    Showing 0 applications.
-                </span>
-
-            </div>
-
-        </main>
-
-    </div>
-</body>
+    </body>
 </html>

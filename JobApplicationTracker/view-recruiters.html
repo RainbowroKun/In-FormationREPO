@@ -326,7 +326,7 @@
             }
 
             return (
-                "<a class='tableLink' href='application-details.html?applicationId=" + recruiter.ApplicationId + "'>" +
+                "<a class='tableLink' href='application-details.html?applicationId=" + recruiter.ApplicationId + "&source=recruiters'>" +
                     EscapeHtml(recruiter.JobTitle) +
                 "</a>"
             );
@@ -399,45 +399,48 @@
 
 
         function EditRecruiter(recruiterId) {
-
-            alert(
-                "Edit recruiter will be connected later. " +
-                "Recruiter ID: " +
-                recruiterId
-            );
+            window.location.href =
+                "edit-recruiter.html?recruiterId=" +
+                recruiterId +
+                "&source=recruiters";
         }
 
 
+        /*
+            Deletes a recruiter.
+        */
+
         function DeleteRecruiter(recruiterId) {
-
-            $(".moreMenu").hide();
-
-            var confirmed = confirm("Delete this recruiter contact?");
+            var confirmed = confirm("Are you sure you want to delete this recruiter contact?");
 
             if (!confirmed) {
                 return;
             }
 
-            /*
-                Front-end placeholder behavior only.
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/DeleteRecruiter",
+                data: JSON.stringify({
+                    recruiterId: recruiterId
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-                The backend version should call a secure service
-                method that verifies recruiter ownership.
-            */
-
-            allRecruiters = allRecruiters.filter(function (recruiter) {
-                    return (
-                        recruiter.RecruiterId != recruiterId);
+                success: function (msg) {
+                    if (msg.d) {
+                        ShowPageMessage("Recruiter deleted successfully.", "success");
+                        LoadRecruiters();
                     }
-                );
+                    else {
+                        ShowPageMessage("Unable to delete the recruiter.", "error");
+                    }
+                },
 
-            PopulateCompanyFilter();
-            FilterRecruiters();
-
-            ShowPageMessage(
-                "Recruiter removed from the placeholder list.",
-                "success"
-            );
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to delete the recruiter.", "error");
+                }
+            });
         }
 
 
@@ -454,26 +457,6 @@
 
             FilterRecruiters();
         }
-
-
-        /*
-            Closes action menus when the user clicks elsewhere.
-        */
-
-        $(document).click(
-            function (event) {
-
-                if (
-                    !$(event.target)
-                        .closest(
-                            ".moreMenuWrapper"
-                        )
-                        .length
-                ) {
-                    $(".moreMenu").hide();
-                }
-            }
-        );
     </script>
 
     <style>
@@ -658,15 +641,15 @@
         }
 
         .reminderUpcoming {
-            border-color: #fdba74;
-            background-color: #fff7ed;
-            color: #c2410c;
-        }
-
-        .reminderOverdue {
             border-color: #86efac;
             background-color: #f0fdf4;
             color: #15803d;
+        }
+
+        .reminderOverdue {
+            border-color: #fdba74;
+            background-color: #fff7ed;
+            color: #c2410c;
         }
 
         .reminderNone {

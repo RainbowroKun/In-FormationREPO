@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Add documents to be linked to applications." />
+    <title>Add Documents - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+<script>
+    $(document).ready(function () {
+        LoadAccountInformation();
+        LoadApplicationOptions();
+
+        $("#documentForm").submit(function (event) {
+            event.preventDefault();
+            AddDocument();
+        });
+
+        $("#applicationId").on("change", UpdateApplicationNotes);
+    });
+
+
+    function LoadApplicationOptions() {
+        $.ajax({
+            type: "POST",
+            url: "ProjectServices.asmx/GetApplications",
+            data: "{}",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+
+            success: function (msg) {
+                var applications = msg.d || [];
+                var applicationSelect = $("#applicationId");
+
+                applicationSelect.empty();
+
+                applicationSelect.append(
+                    "<option value=''>Do not link to an application</option>"
+                );
+
+                applications.forEach(function (application) {
+                    applicationSelect.append(
+                        $("<option>")
+                            .val(application.ApplicationId)
+                            .text(application.CompanyName + " — " + application.JobTitle)
+                    );
+                });
+
+                UpdateApplicationNotes();
+            },
+
+            error: function (xhr) {
+                console.log(xhr.responseText);
+                ShowPageMessage("Unable to load applications.", "error");
+            }
+        });
+    }
+
+
+    function UpdateApplicationNotes() {
+        var hasApplication = $("#applicationId").val() != "";
+
+        $("#applicationNotes")
+            .prop("disabled", !hasApplication);
+
+        if (!hasApplication) {
+            $("#applicationNotes").val("");
+        }
+    }
+
+
+    function AddDocument() {
+        var form = document.getElementById("documentForm");
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        ClearPageMessage();
+
+        var file = $("#documentFile")[0].files[0];
+
+        if (!file) {
+            ShowPageMessage("Please choose a file.", "error");
+            return;
+        }
+
+        var maximumFileSize = 5 * 1024 * 1024;
+
+        if (file.size > maximumFileSize) {
+            ShowPageMessage(file.name + " is larger than the 5 MB limit.", "error");
+            return;
+        }
+
+        $("#addDocumentButton").prop("disabled", true);
+
+        var reader = new FileReader();
+
+        reader.onload = function (event) {
+            var fileResult = event.target.result;
+            var base64 = fileResult.split(",")[1];
+
+            var applicationId =
+                parseInt($("#applicationId").val(), 10);
+
+            if (isNaN(applicationId)) {
+                applicationId = 0;
+            }
+
+            var parameters = JSON.stringify({
+                documentType: $("#documentType").val(),
+                fileName: file.name,
+                contentType: file.type || "application/octet-stream",
+                fileBase64: base64,
+                documentNotes: $("#documentNotes").val().trim(),
+                applicationId: applicationId,
+                applicationNotes: $("#applicationNotes").val().trim()
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/AddDocument",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Document added successfully.", "success");
+                        form.reset();
+                        UpdateApplicationNotes();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to add the document.", "error");
+                },
+
+                complete: function () {
+                    $("#addDocumentButton").prop("disabled", false);
+                }
+            });
+        };
+
+        reader.onerror = function () {
+            $("#addDocumentButton").prop("disabled", false);
+            ShowPageMessage("Unable to read the selected file.", "error");
+        };
+
+        reader.readAsDataURL(file);
+    }
+</script>
+
+<style>
+        /* Add Document page heading. Page width and breadcrumb styling come from site.css. */
+
+        .pageHeading {
+            margin-bottom: 22px;
+        }
+
+            .pageHeading h2 {
+                margin: 0 0 8px;
+                color: #0f172a;
+                font-size: 36px;
+            }
+
+            .pageHeading p {
+                margin: 0;
+                color: #64748b;
+                font-size: 16px;
+            }
+
+
+        /* Main document form card. */
+
+        .documentFormCard {
+            padding: 28px;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            background-color: white;
+            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
+        }
+
+
+        /* Document form grid. Shared .formField styles come from site.css. */
+
+        .documentFormGrid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            column-gap: 26px;
+            row-gap: 4px;
+        }
+
+            .documentFormGrid .formField {
+                margin-bottom: 18px;
+            }
+
+        .fullWidthField {
+            grid-column: 1 / -1;
+        }
+
+        #documentNotes {
+            min-height: 86px;
+        }
+
+        #applicationNotes {
+            min-height: 70px;
+        }
+
+        .fileNotice {
+            margin: 7px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .optionalSectionHeading {
+            grid-column: 1 / -1;
+            margin: 8px 0 4px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+            .optionalSectionHeading h3 {
+                margin: 0 0 5px;
+                color: #0f172a;
+                font-size: 18px;
+            }
+
+            .optionalSectionHeading p {
+                margin: 0;
+                color: #64748b;
+                font-size: 13px;
+            }
+
+
+        /* Form footer buttons. */
+
+        .formActions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 4px -28px -28px;
+            padding: 18px 28px;
+            border-top: 1px solid #e2e8f0;
+            background-color: #ffffff;
+        }
+
+        .backToDocumentsButton {
+            text-decoration: none;
+        }
+
+        .rightFormActions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+            .rightFormActions .secondaryButton,
+            .rightFormActions .primaryButton {
+                min-width: 120px;
+            }
+
+
+        /* Small note below the form. */
+
+        .documentFormNotice {
+            margin: 20px 0 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+</style>
+
+<body>
+
+    <header>
+
+        <div>
+
+            <h1>
+                In Formation Jobs
+            </h1>
+
+            <p>
+                Keep your job search organized and moving forward.
+            </p>
+
+        </div>
+
+        <div class="accountArea">
+
+            <p id="welcomeMessage">
+                Loading account...
+            </p>
+
+            <div id="signedInArea">
+
+                <a class="accountLink"
+                   href="#"
+                   onclick="LogOut(); return false;">
+                    Log Out
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="pageWrapper">
+
+        <nav class="pageNav">
+
+            <a href="home-page.html">
+                Home
+            </a>
+
+            <span>&gt;</span>
+
+            <a href="view-documents.html">
+                View Documents
+            </a>
+
+            <span>&gt;</span>
+
+            <span>
+                Add Document
+            </span>
+
+        </nav>
+
+        <div class="pageHeading">
+
+            <h2>
+                Add Document
+            </h2>
+
+            <p>
+                Upload a document and optionally connect it to one
+                of your job applications.
+            </p>
+
+        </div>
+
+        <main class="documentFormCard">
+
+            <form id="documentForm">
+
+                <div class="documentFormGrid">
+
+                    <div class="formField">
+
+                        <label for="documentType">
+                            Document Type
+                            <span class="requiredMark">*</span>
+                        </label>
+
+                        <select id="documentType"
+                                required>
+
+                            <option value=""
+                                    selected
+                                    disabled>
+                                Select document type
+                            </option>
+
+                            <option value="Resume">
+                                Resume
+                            </option>
+
+                            <option value="Cover Letter">
+                                Cover Letter
+                            </option>
+
+                            <option value="Interview Notes">
+                                Interview Notes
+                            </option>
+
+                            <option value="Reference List">
+                                Reference List
+                            </option>
+
+                            <option value="Other">
+                                Other
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="formField">
+
+                        <label for="documentFile">
+                            Document File
+                            <span class="requiredMark">*</span>
+                        </label>
+
+                        <input type="file"
+                               id="documentFile"
+                               accept=".pdf,.doc,.docx"
+                               required />
+
+                        <p class="fileNotice">
+                            PDF, DOC, or DOCX files up to 5 MB.
+                        </p>
+
+                    </div>
+
+                    <div class="formField fullWidthField">
+
+                        <label for="documentNotes">
+                            Document Notes
+                        </label>
+
+                        <textarea id="documentNotes"
+                                  maxlength="1000"
+                                  placeholder="Enter a description, version, or other notes..."></textarea>
+
+                    </div>
+
+
+                    <div class="optionalSectionHeading">
+
+                        <h3>
+                            Application Link
+                        </h3>
+
+                        <p>
+                            Optional. The document can also be linked
+                            to applications later from Document Details.
+                        </p>
+
+                    </div>
+
+
+                    <div class="formField fullWidthField">
+
+                        <label for="applicationId">
+                            Linked Application
+                        </label>
+
+                        <select id="applicationId">
+
+                            <option value="">
+                                Loading applications...
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="formField fullWidthField">
+
+                        <label for="applicationNotes">
+                            Link Notes
+                        </label>
+
+                        <textarea id="applicationNotes"
+                                  maxlength="500"
+                                  placeholder="Enter notes specific to this application..."
+                                  disabled></textarea>
+
+                    </div>
+
+                </div>
+
+                <p id="pageMessage"></p>
+
+                <div class="formActions">
+
+                    <a class="secondaryButton backToDocumentsButton"
+                       href="view-documents.html">
+                        Back to Documents
+                    </a>
+
+                    <div class="rightFormActions">
+
+                        <button type="button"
+                                id="clearDocumentForm"
+                                class="secondaryButton">
+                            Clear
+                        </button>
+
+                        <button type="submit"
+                                id="addDocumentButton"
+                                class="primaryButton">
+                            Save Document
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </main>
+
+        <p class="documentFormNotice">
+            Documents can be downloaded, linked to additional applications,
+            or managed later from the Documents page.
+        </p>
+
+    </div>
+
+</body>
+</html>

@@ -61,6 +61,16 @@ namespace JobApplicationTracker
             }
         }
 
+        private bool IsAdministrator()
+        {
+            return
+                Session["userId"] != null &&
+                Session["role"] != null &&
+                Session["role"].ToString().Equals(
+                    "admin",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+
         ////////////////////////////////////////////////////////////////////////
         /// Account Creation and Requests
         ////////////////////////////////////////////////////////////////////////
@@ -190,170 +200,144 @@ namespace JobApplicationTracker
         /// Request Management
         ////////////////////////////////////////////////////////////////////////
 
-    [WebMethod(EnableSession = true)]
-    public List<AccountRequestSummary> GetPendingAccountRequests()
-    {
-    List<AccountRequestSummary> requests =
-        new List<AccountRequestSummary>();
-
-    if (Session["userId"] == null ||
-        Session["role"] == null ||
-        Session["role"].ToString().ToLower() != "admin")
-    {
-        return requests;
-    }
-
-    using (MySqlConnection con =
-        new MySqlConnection(getConString()))
-    {
-        con.Open();
-
-        string query = @"
-            SELECT
-                request_id,
-                first_name,
-                last_name,
-                email,
-                username,
-                status,
-                requested_at
-            FROM account_requests
-            WHERE status = 'pending'
-            ORDER BY requested_at ASC;";
-
-        using (MySqlCommand command =
-            new MySqlCommand(query, con))
+        [WebMethod(EnableSession = true)]
+        public List<AccountRequestSummary> GetPendingAccountRequests()
         {
-            using (MySqlDataReader reader =
-                command.ExecuteReader())
+            if (!IsAdministrator())
             {
-                while (reader.Read())
+                throw new HttpException(
+                    403,
+                    "Administrator access is required.");
+            }
+
+            List<AccountRequestSummary> requests =
+                new List<AccountRequestSummary>();
+
+            using (MySqlConnection con =
+                new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        request_id,
+                        first_name,
+                        last_name,
+                        email,
+                        username,
+                        status,
+                        requested_at
+                    FROM account_requests
+                    WHERE status = 'pending'
+                    ORDER BY requested_at ASC;";
+
+                using (MySqlCommand command =
+                    new MySqlCommand(query, con))
                 {
-                    AccountRequestSummary request =
-                        new AccountRequestSummary();
+                    using (MySqlDataReader reader =
+                        command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            AccountRequestSummary request =
+                                new AccountRequestSummary();
 
-                    request.RequestId =
-                        Convert.ToInt32(reader["request_id"]);
+                            request.RequestId =
+                                Convert.ToInt32(reader["request_id"]);
 
-                    request.FirstName =
-                        Convert.ToString(reader["first_name"]);
+                            request.FirstName =
+                                Convert.ToString(reader["first_name"]);
 
-                    request.LastName =
-                        Convert.ToString(reader["last_name"]);
+                            request.LastName =
+                                Convert.ToString(reader["last_name"]);
 
-                    request.Email =
-                        Convert.ToString(reader["email"]);
+                            request.Email =
+                                Convert.ToString(reader["email"]);
 
-                    request.Username =
-                        Convert.ToString(reader["username"]);
+                            request.Username =
+                                Convert.ToString(reader["username"]);
 
-                    request.Status =
-                        Convert.ToString(reader["status"]);
+                            request.Status =
+                                Convert.ToString(reader["status"]);
 
-                    request.RequestedAt =
-                        Convert.ToDateTime(
-                            reader["requested_at"]
-                        ).ToString("yyyy-MM-dd HH:mm:ss");
+                            request.RequestedAt =
+                                Convert.ToDateTime(
+                                    reader["requested_at"]
+                                ).ToString("yyyy-MM-dd HH:mm:ss");
 
-                    requests.Add(request);
+                            requests.Add(request);
+                        }
+                    }
                 }
             }
+
+            return requests;
         }
-    }
 
-    return requests;
-}
+        public class AccountRequestSummary
+        {
+            public int RequestId { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string Email { get; set; }
+            public string Username { get; set; }
+            public string Status { get; set; }
+            public string RequestedAt { get; set; }
+        }
 
-public class AccountRequestSummary
-{
-    public int RequestId
-    { get; set; }
-
-    public string FirstName
-    { get; set; }
-
-    public string LastName
-    { get; set; }
-
-    public string Email
-    { get; set; }
-
-    public string Username
-    { get; set; }
-
-    public string Status
-    { get; set; }
-
-    public string RequestedAt
-    { get; set; }
-}
-    public class UserSummary
-{
-    public int UserId
-    {
-        get;
-        set;
-    }
-
-    public string FirstName
-    {
-        get;
-        set;
-    }
-
-    public string LastName
-    {
-        get;
-        set;
-    }
-
-    public string Email
-    {
-        get;
-        set;
-    }
-
-    public string Username
-    {
-        get;
-        set;
-    }
-
-    public string Role
-    {
-        get;
-        set;
-    }
-}
         [WebMethod(EnableSession = true)]
         public string ApproveAccountRequest(int requestId)
         {
-            if (Session["userId"] == null ||
-         Session["role"] == null ||
-         Session["role"].ToString().ToLower() != "admin")
+            if (!IsAdministrator())
             {
-         return "Administrator access is required.";
+                return "Administrator access is required.";
             }
+
             try
             {
-                using (MySqlConnection con = new MySqlConnection(getConString()))
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
                 {
                     con.Open();
 
-                    using (MySqlTransaction transaction = con.BeginTransaction())
+                    using (MySqlTransaction transaction =
+                        con.BeginTransaction())
                     {
                         string createUserQuery = @"
-							INSERT INTO users
-							(first_name, last_name, email, username, pass, role, active_status)
-							SELECT first_name, last_name, email, username, pass, 'user', TRUE
-							FROM account_requests
-							WHERE request_id = @requestId
-							  AND status = 'pending';";
+                            INSERT INTO users
+                            (
+                                first_name,
+                                last_name,
+                                email,
+                                username,
+                                pass,
+                                role,
+                                active_status
+                            )
+                            SELECT
+                                first_name,
+                                last_name,
+                                email,
+                                username,
+                                pass,
+                                'user',
+                                TRUE
+                            FROM account_requests
+                            WHERE request_id = @requestId
+                                AND status = 'pending';";
 
-                        using (MySqlCommand createUserCommand = new MySqlCommand(createUserQuery, con, transaction))
+                        using (MySqlCommand createUserCommand =
+                            new MySqlCommand(
+                                createUserQuery,
+                                con,
+                                transaction))
                         {
-                            createUserCommand.Parameters.AddWithValue("@requestId", requestId);
-                            int usersCreated = createUserCommand.ExecuteNonQuery();
+                            createUserCommand.Parameters.AddWithValue(
+                                "@requestId",
+                                requestId);
+
+                            int usersCreated =
+                                createUserCommand.ExecuteNonQuery();
 
                             if (usersCreated == 0)
                             {
@@ -363,13 +347,19 @@ public class AccountRequestSummary
                         }
 
                         string updateRequestQuery = @"
-							UPDATE account_requests
-							SET status = 'approved'
-							WHERE request_id = @requestId;";
+                            UPDATE account_requests
+                            SET status = 'approved'
+                            WHERE request_id = @requestId;";
 
-                        using (MySqlCommand updateRequestCommand = new MySqlCommand(updateRequestQuery, con, transaction))
+                        using (MySqlCommand updateRequestCommand =
+                            new MySqlCommand(
+                                updateRequestQuery,
+                                con,
+                                transaction))
                         {
-                            updateRequestCommand.Parameters.AddWithValue("@requestId", requestId);
+                            updateRequestCommand.Parameters.AddWithValue(
+                                "@requestId",
+                                requestId);
 
                             updateRequestCommand.ExecuteNonQuery();
                         }
@@ -386,35 +376,36 @@ public class AccountRequestSummary
             }
         }
 
-
-
-
         [WebMethod(EnableSession = true)]
         public string RejectAccountRequest(int requestId)
         {
-            if (Session["userId"] == null ||
-            Session["role"] == null ||
-             Session["role"].ToString().ToLower() != "admin")
-        {
-        return "Administrator access is required.";
-        }
+            if (!IsAdministrator())
+            {
+                return "Administrator access is required.";
+            }
+
             try
             {
-                using (MySqlConnection con = new MySqlConnection(getConString()))
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
                 {
                     con.Open();
 
                     string query = @"
-						UPDATE account_requests
-						SET status = 'rejected'
-						WHERE request_id = @requestId
-						  AND status = 'pending';";
+                        UPDATE account_requests
+                        SET status = 'rejected'
+                        WHERE request_id = @requestId
+                            AND status = 'pending';";
 
-                    using (MySqlCommand cmd = new MySqlCommand(query, con))
+                    using (MySqlCommand command =
+                        new MySqlCommand(query, con))
                     {
-                        cmd.Parameters.AddWithValue("@requestId", requestId);
+                        command.Parameters.AddWithValue(
+                            "@requestId",
+                            requestId);
 
-                        int changedRows = cmd.ExecuteNonQuery();
+                        int changedRows =
+                            command.ExecuteNonQuery();
 
                         if (changedRows == 0)
                         {
@@ -430,175 +421,6 @@ public class AccountRequestSummary
                 return "Unable to reject the request. Error: " + e.Message;
             }
         }
-        [WebMethod(EnableSession = true)]
-public List<UserSummary> GetUsers()
-{
-    List<UserSummary> users =
-        new List<UserSummary>();
-
-    if (Session["userId"] == null ||
-        Session["role"] == null ||
-        Session["role"].ToString().ToLower() != "admin")
-    {
-        return users;
-    }
-
-    using (MySqlConnection con =
-        new MySqlConnection(getConString()))
-    {
-        con.Open();
-
-        string query = @"
-            SELECT
-                user_id,
-                first_name,
-                last_name,
-                email,
-                username,
-                role
-            FROM users
-            ORDER BY last_name, first_name;";
-
-        using (MySqlCommand command =
-            new MySqlCommand(query, con))
-        using (MySqlDataReader reader =
-            command.ExecuteReader())
-        {
-            while (reader.Read())
-            {
-                UserSummary user =
-                    new UserSummary();
-
-                user.UserId =
-                    Convert.ToInt32(reader["user_id"]);
-
-                user.FirstName =
-                    reader["first_name"].ToString();
-
-                user.LastName =
-                    reader["last_name"].ToString();
-
-                user.Email =
-                    reader["email"].ToString();
-
-                user.Username =
-                    reader["username"].ToString();
-
-                user.Role =
-                    reader["role"].ToString();
-
-                users.Add(user);
-            }
-        }
-    }
-
-    return users;
-}
-
-[WebMethod(EnableSession = true)]
-public string PromoteUser(int userId)
-{
-    if (Session["userId"] == null ||
-        Session["role"] == null ||
-        Session["role"].ToString().ToLower() != "admin")
-    {
-        return "Administrator access is required.";
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query = @"
-                UPDATE users
-                SET role = 'admin'
-                WHERE user_id = @userId
-                  AND role = 'user';";
-
-            using (MySqlCommand command =
-                new MySqlCommand(query, con))
-            {
-                command.Parameters.AddWithValue(
-                    "@userId",
-                    userId
-                );
-
-                int changedRows =
-                    command.ExecuteNonQuery();
-
-                if (changedRows == 0)
-                {
-                    return "The user was not found or is already an administrator.";
-                }
-            }
-        }
-
-        return "User promoted successfully.";
-    }
-    catch (Exception e)
-    {
-        return "Unable to promote the user. Error: " +
-            e.Message;
-    }
-}
-[WebMethod(EnableSession = true)]
-public string DeleteUser(int userId)
-{
-    if (Session["userId"] == null ||
-        Session["role"] == null ||
-        Session["role"].ToString().ToLower() != "admin")
-    {
-        return "Administrator access is required.";
-    }
-
-    int currentUserId =
-        Convert.ToInt32(Session["userId"]);
-
-    if (currentUserId == userId)
-    {
-        return "You cannot delete your own account.";
-    }
-
-    try
-    {
-        using (MySqlConnection con =
-            new MySqlConnection(getConString()))
-        {
-            con.Open();
-
-            string query = @"
-                DELETE FROM users
-                WHERE user_id = @userId;";
-
-            using (MySqlCommand command =
-                new MySqlCommand(query, con))
-            {
-                command.Parameters.AddWithValue(
-                    "@userId",
-                    userId
-                );
-
-                int changedRows =
-                    command.ExecuteNonQuery();
-
-                if (changedRows == 0)
-                {
-                    return "The user account was not found.";
-                }
-            }
-        }
-
-        return "User account deleted successfully.";
-    }
-    catch (Exception e)
-    {
-        return "Unable to delete the user. Error: " +
-            e.Message;
-    }
-}
 
         ////////////////////////////////////////////////////////////////////////
         /// Page Utility
@@ -1295,9 +1117,385 @@ public class ApplicationEditDetails
             { get; set; }
         }
 
+        [WebMethod(EnableSession = true)]
+        public string ToggleApplicationArchive(int applicationId)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0)
+            {
+                return "A valid application is required.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        UPDATE applications
+                        SET
+                            is_archived =
+                                CASE
+                                    WHEN is_archived = 1 THEN 0
+                                    ELSE 1
+                                END,
+                            updated_at = NOW()
+                        WHERE application_id = @applicationId
+                            AND user_id = @userId;";
+
+                    using (MySqlCommand command =
+                        new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue(
+                            "@applicationId",
+                            applicationId);
+
+                        command.Parameters.AddWithValue(
+                            "@userId",
+                            userId);
+
+                        int rowsUpdated =
+                            command.ExecuteNonQuery();
+
+                        if (rowsUpdated == 0)
+                        {
+                            return "Application was not found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to update the application. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string DeleteApplication(int applicationId)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0)
+            {
+                return "A valid application is required.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con =
+                new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                using (MySqlTransaction transaction =
+                    con.BeginTransaction())
+                {
+                    try
+                    {
+                        string ownershipSql = @"
+                            SELECT COUNT(*)
+                            FROM applications
+                            WHERE application_id = @applicationId
+                                AND user_id = @userId;";
+
+                        using (MySqlCommand ownershipCommand =
+                            new MySqlCommand(
+                                ownershipSql,
+                                con,
+                                transaction))
+                        {
+                            ownershipCommand.Parameters.AddWithValue(
+                                "@applicationId",
+                                applicationId);
+
+                            ownershipCommand.Parameters.AddWithValue(
+                                "@userId",
+                                userId);
+
+                            int applicationCount =
+                                Convert.ToInt32(
+                                    ownershipCommand.ExecuteScalar());
+
+                            if (applicationCount == 0)
+                            {
+                                transaction.Rollback();
+                                return "Application was not found.";
+                            }
+                        }
+
+
+                        string interviewSql = @"
+                            DELETE FROM interviews
+                            WHERE application_id = @applicationId;";
+
+                        using (MySqlCommand interviewCommand =
+                            new MySqlCommand(
+                                interviewSql,
+                                con,
+                                transaction))
+                        {
+                            interviewCommand.Parameters.AddWithValue(
+                                "@applicationId",
+                                applicationId);
+
+                            interviewCommand.ExecuteNonQuery();
+                        }
+
+
+                        string documentLinkSql = @"
+                            DELETE FROM application_documents
+                            WHERE application_id = @applicationId;";
+
+                        using (MySqlCommand documentLinkCommand =
+                            new MySqlCommand(
+                                documentLinkSql,
+                                con,
+                                transaction))
+                        {
+                            documentLinkCommand.Parameters.AddWithValue(
+                                "@applicationId",
+                                applicationId);
+
+                            documentLinkCommand.ExecuteNonQuery();
+                        }
+
+
+                        string recruiterSql = @"
+                            DELETE FROM recruiters
+                            WHERE application_id = @applicationId;";
+
+                        using (MySqlCommand recruiterCommand =
+                            new MySqlCommand(
+                                recruiterSql,
+                                con,
+                                transaction))
+                        {
+                            recruiterCommand.Parameters.AddWithValue(
+                                "@applicationId",
+                                applicationId);
+
+                            recruiterCommand.ExecuteNonQuery();
+                        }
+
+
+                        string applicationSql = @"
+                            DELETE FROM applications
+                            WHERE application_id = @applicationId
+                                AND user_id = @userId;";
+
+                        using (MySqlCommand applicationCommand =
+                            new MySqlCommand(
+                                applicationSql,
+                                con,
+                                transaction))
+                        {
+                            applicationCommand.Parameters.AddWithValue(
+                                "@applicationId",
+                                applicationId);
+
+                            applicationCommand.Parameters.AddWithValue(
+                                "@userId",
+                                userId);
+
+                            int rowsDeleted =
+                                applicationCommand.ExecuteNonQuery();
+
+                            if (rowsDeleted == 0)
+                            {
+                                transaction.Rollback();
+                                return "Application was not found.";
+                            }
+                        }
+
+                        transaction.Commit();
+                        return "Success";
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+
+                        return "Unable to delete the application. Error: " +
+                            ex.Message;
+                    }
+                }
+            }
+        }
+
         ////////////////////////////////////////////////////////////////////////
         /// Documents Function
         ////////////////////////////////////////////////////////////////////////
+        [WebMethod(EnableSession = true)]
+        public string AddDocument(
+            string documentType,
+            string fileName,
+            string contentType,
+            string fileBase64,
+            string documentNotes,
+            int applicationId,
+            string applicationNotes)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (string.IsNullOrWhiteSpace(documentType) ||
+                string.IsNullOrWhiteSpace(fileName) ||
+                string.IsNullOrWhiteSpace(fileBase64))
+            {
+                return "Please select a document type and file.";
+            }
+
+            byte[] fileData;
+
+            try
+            {
+                fileData = Convert.FromBase64String(fileBase64);
+            }
+            catch (FormatException)
+            {
+                return "The selected file could not be processed.";
+            }
+
+            int maximumFileSize = 5 * 1024 * 1024;
+
+            if (fileData.Length > maximumFileSize)
+            {
+                return fileName + " is larger than the 5 MB limit.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                using (MySqlTransaction transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        if (applicationId > 0)
+                        {
+                            string ownershipSql = @"
+                                SELECT COUNT(*)
+                                FROM applications
+                                WHERE application_id = @applicationId
+                                    AND user_id = @userId;";
+
+                            using (MySqlCommand ownershipCommand =
+                                new MySqlCommand(ownershipSql, con, transaction))
+                            {
+                                ownershipCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                                ownershipCommand.Parameters.AddWithValue("@userId", userId);
+
+                                int applicationCount =
+                                    Convert.ToInt32(ownershipCommand.ExecuteScalar());
+
+                                if (applicationCount == 0)
+                                {
+                                    transaction.Rollback();
+                                    return "Application was not found.";
+                                }
+                            }
+                        }
+
+                        string documentSql = @"
+                            INSERT INTO documents
+                            (
+                                user_id,
+                                document_type,
+                                file_name,
+                                content_type,
+                                file_size,
+                                file_data,
+                                notes
+                            )
+                            VALUES
+                            (
+                                @userId,
+                                @documentType,
+                                @fileName,
+                                @contentType,
+                                @fileSize,
+                                @fileData,
+                                @documentNotes
+                            );";
+
+                        int documentId;
+
+                        using (MySqlCommand documentCommand =
+                            new MySqlCommand(documentSql, con, transaction))
+                        {
+                            documentCommand.Parameters.AddWithValue("@userId", userId);
+                            documentCommand.Parameters.AddWithValue("@documentType", documentType.Trim());
+                            documentCommand.Parameters.AddWithValue("@fileName", fileName.Trim());
+                            documentCommand.Parameters.AddWithValue(
+                                "@contentType",
+                                string.IsNullOrWhiteSpace(contentType)
+                                    ? "application/octet-stream"
+                                    : contentType.Trim());
+                            documentCommand.Parameters.AddWithValue("@fileSize", fileData.Length);
+                            documentCommand.Parameters.AddWithValue("@fileData", fileData);
+                            documentCommand.Parameters.AddWithValue("@documentNotes", EmptyToNull(documentNotes));
+
+                            documentCommand.ExecuteNonQuery();
+
+                            documentId =
+                                Convert.ToInt32(documentCommand.LastInsertedId);
+                        }
+
+                        if (applicationId > 0)
+                        {
+                            string linkSql = @"
+                                INSERT INTO application_documents
+                                (
+                                    application_id,
+                                    document_id,
+                                    application_notes
+                                )
+                                VALUES
+                                (
+                                    @applicationId,
+                                    @documentId,
+                                    @applicationNotes
+                                );";
+
+                            using (MySqlCommand linkCommand =
+                                new MySqlCommand(linkSql, con, transaction))
+                            {
+                                linkCommand.Parameters.AddWithValue("@applicationId", applicationId);
+                                linkCommand.Parameters.AddWithValue("@documentId", documentId);
+                                linkCommand.Parameters.AddWithValue("@applicationNotes", EmptyToNull(applicationNotes));
+
+                                linkCommand.ExecuteNonQuery();
+                            }
+                        }
+
+                        transaction.Commit();
+                        return "Success";
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        return "Unable to add the document. Error: " + ex.Message;
+                    }
+                }
+            }
+        }
+
 
         [WebMethod(EnableSession = true)]
         public ApplicationDocumentsResult GetApplicationDocuments(int applicationId)
@@ -1693,6 +1891,221 @@ public class ApplicationEditDetails
             }
 
             return result;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string LinkApplicationDocument(
+            int applicationId,
+            int documentId,
+            string applicationNotes)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0 || documentId <= 0)
+            {
+                return "A valid application and document are required.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        INSERT INTO application_documents
+                            (application_id, document_id, application_notes)
+                        SELECT
+                            a.application_id,
+                            d.document_id,
+                            @applicationNotes
+                        FROM applications a
+                        INNER JOIN documents d
+                            ON d.document_id = @documentId
+                            AND d.user_id = @userId
+                        WHERE a.application_id = @applicationId
+                            AND a.user_id = @userId
+                            AND NOT EXISTS
+                            (
+                                SELECT 1
+                                FROM application_documents ad
+                                WHERE ad.application_id = @applicationId
+                                    AND ad.document_id = @documentId
+                            );";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@applicationId", applicationId);
+                        command.Parameters.AddWithValue("@documentId", documentId);
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@applicationNotes", EmptyToNull(applicationNotes));
+
+                        int rowsAdded = command.ExecuteNonQuery();
+
+                        if (rowsAdded == 0)
+                        {
+                            return "The application could not be linked to this document.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to link the application. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string UnlinkApplicationDocument(
+            int applicationId,
+            int documentId)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (applicationId <= 0 || documentId <= 0)
+            {
+                return "A valid application and document are required.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        DELETE ad
+                        FROM application_documents ad
+                        INNER JOIN applications a
+                            ON ad.application_id = a.application_id
+                        INNER JOIN documents d
+                            ON ad.document_id = d.document_id
+                        WHERE ad.application_id = @applicationId
+                            AND ad.document_id = @documentId
+                            AND a.user_id = @userId
+                            AND d.user_id = @userId;";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@applicationId", applicationId);
+                        command.Parameters.AddWithValue("@documentId", documentId);
+                        command.Parameters.AddWithValue("@userId", userId);
+
+                        int rowsDeleted = command.ExecuteNonQuery();
+
+                        if (rowsDeleted == 0)
+                        {
+                            return "The application link could not be found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to unlink the application. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string DeleteDocument(int documentId)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (documentId <= 0)
+            {
+                return "A valid document is required.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                using (MySqlTransaction transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        string ownershipSql = @"
+                            SELECT COUNT(*)
+                            FROM documents
+                            WHERE document_id = @documentId
+                                AND user_id = @userId;";
+
+                        int documentCount;
+
+                        using (MySqlCommand ownershipCommand =
+                            new MySqlCommand(ownershipSql, con, transaction))
+                        {
+                            ownershipCommand.Parameters.AddWithValue("@documentId", documentId);
+                            ownershipCommand.Parameters.AddWithValue("@userId", userId);
+
+                            documentCount =
+                                Convert.ToInt32(ownershipCommand.ExecuteScalar());
+                        }
+
+                        if (documentCount == 0)
+                        {
+                            transaction.Rollback();
+                            return "Document was not found.";
+                        }
+
+                        string linkSql = @"
+                            DELETE FROM application_documents
+                            WHERE document_id = @documentId;";
+
+                        using (MySqlCommand linkCommand =
+                            new MySqlCommand(linkSql, con, transaction))
+                        {
+                            linkCommand.Parameters.AddWithValue("@documentId", documentId);
+                            linkCommand.ExecuteNonQuery();
+                        }
+
+                        string documentSql = @"
+                            DELETE FROM documents
+                            WHERE document_id = @documentId
+                                AND user_id = @userId;";
+
+                        using (MySqlCommand documentCommand =
+                            new MySqlCommand(documentSql, con, transaction))
+                        {
+                            documentCommand.Parameters.AddWithValue("@documentId", documentId);
+                            documentCommand.Parameters.AddWithValue("@userId", userId);
+
+                            if (documentCommand.ExecuteNonQuery() == 0)
+                            {
+                                transaction.Rollback();
+                                return "Document was not found.";
+                            }
+                        }
+
+                        transaction.Commit();
+                        return "Success";
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        return "Unable to delete the document. Error: " + ex.Message;
+                    }
+                }
+            }
         }
         ////////////////////////////////////////////////////////////////////////
         /// Interview Functions
@@ -2248,7 +2661,7 @@ public class ApplicationEditDetails
             List<RecruiterSummary> recruiters =
                 new List<RecruiterSummary>();
 
-            if (Session["username"] == null)
+            if (Session["userId"] == null)
             {
                 return recruiters;
             }
@@ -2363,6 +2776,245 @@ public class ApplicationEditDetails
 
             return recruiters;
         }
+
+        [WebMethod(EnableSession = true)]
+        public RecruiterSummary GetRecruiter(int recruiterId)
+        {
+            if (Session["userId"] == null || recruiterId <= 0)
+            {
+                return null;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        r.recruiter_id,
+                        r.application_id,
+                        r.first_name,
+                        r.last_name,
+                        r.company_name,
+                        r.email,
+                        r.phone,
+                        r.follow_up_reminder_date,
+                        r.last_contact_date,
+                        r.notes,
+                        a.job_title
+                    FROM recruiters r
+                    INNER JOIN applications a
+                        ON r.application_id = a.application_id
+                    WHERE r.recruiter_id = @recruiterId
+                        AND a.user_id = @userId
+                    LIMIT 1;";
+
+                using (MySqlCommand command = new MySqlCommand(query, con))
+                {
+                    command.Parameters.AddWithValue("@recruiterId", recruiterId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            RecruiterSummary recruiter = new RecruiterSummary();
+
+                            recruiter.RecruiterId = Convert.ToInt32(reader["recruiter_id"]);
+                            recruiter.ApplicationId = Convert.ToInt32(reader["application_id"]);
+                            recruiter.FirstName = Convert.ToString(reader["first_name"]);
+                            recruiter.LastName = Convert.ToString(reader["last_name"]);
+                            recruiter.CompanyName = Convert.ToString(reader["company_name"]);
+                            recruiter.Email = Convert.ToString(reader["email"]);
+                            recruiter.Phone = reader["phone"] == DBNull.Value ? "" : Convert.ToString(reader["phone"]);
+                            recruiter.JobTitle = Convert.ToString(reader["job_title"]);
+                            recruiter.FollowUpReminderDate = reader["follow_up_reminder_date"] == DBNull.Value ? "" : Convert.ToDateTime(reader["follow_up_reminder_date"]).ToString("yyyy-MM-dd");
+                            recruiter.LastContactDate = reader["last_contact_date"] == DBNull.Value ? "" : Convert.ToDateTime(reader["last_contact_date"]).ToString("yyyy-MM-dd");
+                            recruiter.Notes = reader["notes"] == DBNull.Value ? "" : Convert.ToString(reader["notes"]);
+
+                            return recruiter;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string UpdateRecruiter(
+            int recruiterId,
+            string firstName,
+            string lastName,
+            string email,
+            string phone,
+            string followUpReminderDate,
+            string lastContactDate,
+            string notes)
+        {
+            if (Session["userId"] == null)
+            {
+                return "Please log in first.";
+            }
+
+            if (recruiterId <= 0)
+            {
+                return "A valid recruiter is required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(firstName) ||
+                string.IsNullOrWhiteSpace(lastName) ||
+                string.IsNullOrWhiteSpace(email))
+            {
+                return "Please enter the recruiter's first name, last name, and email.";
+            }
+
+            if (firstName.Trim().Length > 50 ||
+                lastName.Trim().Length > 50 ||
+                email.Trim().Length > 100 ||
+                (!string.IsNullOrWhiteSpace(phone) && phone.Trim().Length > 25))
+            {
+                return "One or more recruiter fields are too long.";
+            }
+
+            object followUpReminderValue;
+            object lastContactValue;
+
+            if (!TryGetOptionalDate(followUpReminderDate, out followUpReminderValue))
+            {
+                return "The follow-up reminder date is invalid.";
+            }
+
+            if (!TryGetOptionalDate(lastContactDate, out lastContactValue))
+            {
+                return "The last-contact date is invalid.";
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            try
+            {
+                using (MySqlConnection con = new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        UPDATE recruiters r
+                        INNER JOIN applications a
+                            ON r.application_id = a.application_id
+                        SET
+                            r.first_name = @firstName,
+                            r.last_name = @lastName,
+                            r.email = @email,
+                            r.phone = @phone,
+                            r.follow_up_reminder_date = @followUpReminderDate,
+                            r.last_contact_date = @lastContactDate,
+                            r.notes = @notes
+                        WHERE r.recruiter_id = @recruiterId
+                            AND a.user_id = @userId;";
+
+                    using (MySqlCommand command = new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue("@recruiterId", recruiterId);
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@firstName", firstName.Trim());
+                        command.Parameters.AddWithValue("@lastName", lastName.Trim());
+                        command.Parameters.AddWithValue("@email", email.Trim());
+                        command.Parameters.AddWithValue("@phone", EmptyToNull(phone));
+                        command.Parameters.AddWithValue("@followUpReminderDate", followUpReminderValue);
+                        command.Parameters.AddWithValue("@lastContactDate", lastContactValue);
+                        command.Parameters.AddWithValue("@notes", EmptyToNull(notes));
+
+                        int rowsUpdated = command.ExecuteNonQuery();
+
+                        if (rowsUpdated == 0)
+                        {
+                            return "The recruiter could not be found.";
+                        }
+                    }
+                }
+
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                return "Unable to update recruiter information. Error: " + ex.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public bool DeleteRecruiter(int recruiterId)
+        {
+            if (Session["userId"] == null || recruiterId <= 0)
+            {
+                return false;
+            }
+
+            int userId = Convert.ToInt32(Session["userId"]);
+
+            using (MySqlConnection con = new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                using (MySqlTransaction transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        string unlinkInterviewsQuery = @"
+                            UPDATE interviews i
+                            INNER JOIN applications a
+                                ON i.application_id = a.application_id
+                            SET i.recruiter_id = NULL
+                            WHERE i.recruiter_id = @recruiterId
+                                AND a.user_id = @userId;";
+
+                        using (MySqlCommand command = new MySqlCommand(unlinkInterviewsQuery, con, transaction))
+                        {
+                            command.Parameters.AddWithValue("@recruiterId", recruiterId);
+                            command.Parameters.AddWithValue("@userId", userId);
+
+                            command.ExecuteNonQuery();
+                        }
+
+                        string deleteRecruiterQuery = @"
+                            DELETE r
+                            FROM recruiters r
+                            INNER JOIN applications a
+                                ON r.application_id = a.application_id
+                            WHERE r.recruiter_id = @recruiterId
+                                AND a.user_id = @userId;";
+
+                        int deletedRows;
+
+                        using (MySqlCommand command = new MySqlCommand(deleteRecruiterQuery, con, transaction))
+                        {
+                            command.Parameters.AddWithValue("@recruiterId", recruiterId);
+                            command.Parameters.AddWithValue("@userId", userId);
+
+                            deletedRows = command.ExecuteNonQuery();
+                        }
+
+                        if (deletedRows == 0)
+                        {
+                            transaction.Rollback();
+                            return false;
+                        }
+
+                        transaction.Commit();
+
+                        return true;
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+            }
+        }
+
         [WebMethod(EnableSession = true)]
         public string SetFollowUpDate(string linkType, int linkedRecordId, string followUpDate)
         {

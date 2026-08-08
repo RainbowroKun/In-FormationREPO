@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
 
     <meta name="description"
-          content="Add a recruiter contact and connect them to a job application." />
+          content="Edit a recruiter contact." />
 
-    <title>Add Recruiter - In Formation Jobs</title>
+    <title>Edit Recruiter - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
@@ -15,116 +15,159 @@
           href="site.css" />
 
     <script>
+            var recruiterId = 0;
+            var currentRecruiter = null;
 
-        $(document).ready(function () {
 
-            LoadAccountInformation();
+            $(document).ready(function () {
+                LoadAccountInformation();
+                UpdatePageNavigation();
 
-            LoadApplicationOptions();
+                var parameters = new URLSearchParams(window.location.search);
+                recruiterId = parseInt(parameters.get("recruiterId"), 10);
 
-            $("#recruiterForm").submit(function (event) {
+                if (!recruiterId) {
+                    ShowPageMessage("A valid recruiter is required.", "error");
+                    $("#saveRecruiterButton").prop("disabled", true);
+                    return;
+                }
 
+                $("#recruiterForm").submit(function (event) {
                     event.preventDefault();
                     SaveRecruiter();
-                }
-            );
+                });
 
-            $("#clearRecruiterForm").on("click", ClearRecruiterForm);
-        });
+                $("#resetRecruiterForm").on("click", ResetRecruiterForm);
 
-        function LoadApplicationOptions() {
-            $.ajax({
-                type: "POST",
-                url: "ProjectServices.asmx/GetApplications",
-                data: "{}",
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-
-                success: function (msg) {
-                    var applications = msg.d || [];
-                    var applicationSelect = $("#applicationId");
-
-                    applications.forEach(function (application) {
-                        applicationSelect.append($("<option>").val(application.ApplicationId).text(application.CompanyName + " — " + application.JobTitle));
-                    });
-                    if (applications.length == 0) {
-                        ShowPageMessage("You need to add an application before adding a recruiter.", "error");
-                    }
-                },
-                error: function (xhr) {
-                    console.log(xhr.responseText);
-                    ShowPageMessage("Unable to load your applications.", "error");
-                }
+                LoadRecruiter();
             });
-        }
 
-        function SaveRecruiter() {
-            var form = document.getElementById("recruiterForm");
 
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
+            /*
+                Loads the recruiter being edited.
+            */
+
+            function LoadRecruiter() {
+                $.ajax({
+                    type: "POST",
+                    url: "ProjectServices.asmx/GetRecruiter",
+                    data: JSON.stringify({
+                        recruiterId: recruiterId
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+
+                    success: function (msg) {
+                        if (!msg.d) {
+                            ShowPageMessage("The recruiter could not be found.", "error");
+                            $("#saveRecruiterButton").prop("disabled", true);
+                            return;
+                        }
+
+                        currentRecruiter = msg.d;
+                        PopulateRecruiterForm();
+                    },
+
+                    error: function (xhr) {
+                        console.log(xhr.responseText);
+                        ShowPageMessage("Unable to load the recruiter.", "error");
+                        $("#saveRecruiterButton").prop("disabled", true);
+                    }
+                });
             }
 
-            ClearPageMessage();
-            $("#saveRecruiterButton").prop("disabled", true);
 
-            var parameters = JSON.stringify({
-                applicationId: parseInt($("#applicationId").val(), 10),
-                firstName: $("#firstName").val().trim(),
-                lastName: $("#lastName").val().trim(),
-                email: $("#email").val().trim(),
-                phone: $("#phone").val().trim(),
-                followUpReminderDate: $("#followUpReminderDate").val(),
-                lastContactDate: $("#lastContactDate").val(),
-                notes: $("#notes").val().trim()
-            });
+            /*
+                Populates the form with the saved recruiter information.
+            */
 
-            $.ajax({
-                type: "POST",
-                url: "ProjectServices.asmx/AddRecruiter",
-                data: parameters,
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-
-                success: function (msg) {
-                    if (msg.d == "Success") {
-                        ShowPageMessage("Recruiter saved successfully.", "success");
-                        form.reset();
-                        $("#firstName").focus();
-                    }
-                    else {
-                        ShowPageMessage(msg.d, "error");
-                    }
-                },
-
-                error: function (xhr) {
-                    console.log(xhr.responseText);
-                    ShowPageMessage("Unable to save the recruiter. Check the browser console.", "error");
-                },
-
-                complete: function () {
-                    $("#saveRecruiterButton").prop("disabled", false);
+            function PopulateRecruiterForm() {
+                if (!currentRecruiter) {
+                    return;
                 }
-            });
-        }
+
+                $("#firstName").val(currentRecruiter.FirstName);
+                $("#lastName").val(currentRecruiter.LastName);
+                $("#email").val(currentRecruiter.Email);
+                $("#phone").val(currentRecruiter.Phone);
+                $("#lastContactDate").val(currentRecruiter.LastContactDate);
+                $("#followUpReminderDate").val(currentRecruiter.FollowUpReminderDate);
+                $("#notes").val(currentRecruiter.Notes);
+
+                $("#applicationId")
+                    .empty()
+                    .append(
+                        $("<option>")
+                            .val(currentRecruiter.ApplicationId)
+                            .text(currentRecruiter.CompanyName + " — " + currentRecruiter.JobTitle)
+                    );
+            }
 
 
-        /*
-            Clears every field and restores the application
-            dropdown to its placeholder option.
-        */
+            /*
+                Updates the recruiter with the entered information.
+            */
 
-        function ClearRecruiterForm() {
+            function SaveRecruiter() {
+                var form = document.getElementById("recruiterForm");
 
-            document.getElementById("recruiterForm").reset();
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
 
-            ClearPageMessage();
+                ClearPageMessage();
+                $("#saveRecruiterButton").prop("disabled", true);
 
-            $("#firstName").focus();
-        }
+                var parameters = JSON.stringify({
+                    recruiterId: recruiterId,
+                    firstName: $("#firstName").val().trim(),
+                    lastName: $("#lastName").val().trim(),
+                    email: $("#email").val().trim(),
+                    phone: $("#phone").val().trim(),
+                    followUpReminderDate: $("#followUpReminderDate").val(),
+                    lastContactDate: $("#lastContactDate").val(),
+                    notes: $("#notes").val().trim()
+                });
 
-    </script>
+                $.ajax({
+                    type: "POST",
+                    url: "ProjectServices.asmx/UpdateRecruiter",
+                    data: parameters,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+
+                    success: function (msg) {
+                        if (msg.d == "Success") {
+                            ShowPageMessage("Recruiter updated successfully.", "success");
+                            LoadRecruiter();
+                        }
+                        else {
+                            ShowPageMessage(msg.d, "error");
+                        }
+                    },
+
+                    error: function (xhr) {
+                        console.log(xhr.responseText);
+                        ShowPageMessage("Unable to update the recruiter. Check the browser console.", "error");
+                    },
+
+                    complete: function () {
+                        $("#saveRecruiterButton").prop("disabled", false);
+                    }
+                });
+            }
+
+
+            /*
+                Restores the recruiter's saved information.
+            */
+
+            function ResetRecruiterForm() {
+                ClearPageMessage();
+                PopulateRecruiterForm();
+            }
+        </script>
 
     <style>
 
@@ -264,7 +307,7 @@
 
     <div class="pageWrapper">
 
-        <nav class="pageNav">
+            <nav class="pageNav">
 
             <a href="home-page.html">
                 Home
@@ -272,14 +315,15 @@
 
             <span>&gt;</span>
 
-            <a href="view-recruiters.html">
+            <a id="sourceBreadcrumb"
+            href="view-recruiters.html">
                 View Recruiters
             </a>
 
             <span>&gt;</span>
 
             <span>
-                Add Recruiter
+                Edit Recruiter
             </span>
 
         </nav>
@@ -287,12 +331,11 @@
         <div class="pageHeading">
 
             <h2>
-                Add Recruiter
+                Edit Recruiter
             </h2>
 
             <p>
-                Add a recruiter contact and connect them to one
-                of your job applications.
+                Edit a recruiter contact.
             </p>
 
         </div>
@@ -341,12 +384,10 @@
                         </label>
 
                         <select id="applicationId"
-                                required>
+                                disabled>
 
-                            <option value=""
-                                    selected
-                                    disabled>
-                                Select the job application this recruiter is connected to
+                            <option value="">
+                                Loading linked application...
                             </option>
 
                         </select>
@@ -421,23 +462,24 @@
 
                 <div class="formActions">
 
-                    <a class="secondaryButton backToRecruitersButton"
-                       href="view-recruiters.html">
-                        Back to Recruiters
-                    </a>
+                    <button type="button"
+                            class="secondaryButton backToRecruitersButton"
+                            onclick="GoBackOrDefault('view-recruiters.html');">
+                        Back
+                    </button>
 
                     <div class="rightFormActions">
 
                         <button type="button"
-                                id="clearRecruiterForm"
+                                id="resetRecruiterForm"
                                 class="secondaryButton">
-                            Clear
+                            Reset Changes
                         </button>
 
                         <button type="submit"
                                 id="saveRecruiterButton"
                                 class="primaryButton">
-                            Save Recruiter
+                            Save Changes
                         </button>
 
                     </div>
