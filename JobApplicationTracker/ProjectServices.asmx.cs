@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Web;
 using System.Web.Services;
 
 namespace JobApplicationTracker
@@ -419,6 +420,181 @@ namespace JobApplicationTracker
             catch (Exception e)
             {
                 return "Unable to reject the request. Error: " + e.Message;
+            }
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        /// User Management
+        ////////////////////////////////////////////////////////////////////////
+
+        public class UserSummary
+        {
+            public int UserId { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string Email { get; set; }
+            public string Username { get; set; }
+            public string Role { get; set; }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public List<UserSummary> GetUsers()
+        {
+            List<UserSummary> users =
+                new List<UserSummary>();
+
+            if (!IsAdministrator())
+            {
+                return users;
+            }
+
+            using (MySqlConnection con =
+                new MySqlConnection(getConString()))
+            {
+                con.Open();
+
+                string query = @"
+                    SELECT
+                        user_id,
+                        first_name,
+                        last_name,
+                        email,
+                        username,
+                        role
+                    FROM users
+                    ORDER BY last_name, first_name;";
+
+                using (MySqlCommand command =
+                    new MySqlCommand(query, con))
+                using (MySqlDataReader reader =
+                    command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        UserSummary user =
+                            new UserSummary();
+
+                        user.UserId =
+                            Convert.ToInt32(reader["user_id"]);
+
+                        user.FirstName =
+                            reader["first_name"].ToString();
+
+                        user.LastName =
+                            reader["last_name"].ToString();
+
+                        user.Email =
+                            reader["email"].ToString();
+
+                        user.Username =
+                            reader["username"].ToString();
+
+                        user.Role =
+                            reader["role"].ToString();
+
+                        users.Add(user);
+                    }
+                }
+            }
+
+            return users;
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string PromoteUser(int userId)
+        {
+            if (!IsAdministrator())
+            {
+                return "Administrator access is required.";
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        UPDATE users
+                        SET role = 'admin'
+                        WHERE user_id = @userId
+                            AND role = 'user';";
+
+                    using (MySqlCommand command =
+                        new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue(
+                            "@userId",
+                            userId);
+
+                        int changedRows =
+                            command.ExecuteNonQuery();
+
+                        if (changedRows == 0)
+                        {
+                            return "The user was not found or is already an administrator.";
+                        }
+                    }
+                }
+
+                return "User promoted successfully.";
+            }
+            catch (Exception e)
+            {
+                return "Unable to promote the user. Error: " + e.Message;
+            }
+        }
+
+        [WebMethod(EnableSession = true)]
+        public string DeleteUser(int userId)
+        {
+            if (!IsAdministrator())
+            {
+                return "Administrator access is required.";
+            }
+
+            int currentUserId =
+                Convert.ToInt32(Session["userId"]);
+
+            if (currentUserId == userId)
+            {
+                return "You cannot delete your own account.";
+            }
+
+            try
+            {
+                using (MySqlConnection con =
+                    new MySqlConnection(getConString()))
+                {
+                    con.Open();
+
+                    string query = @"
+                        DELETE FROM users
+                        WHERE user_id = @userId;";
+
+                    using (MySqlCommand command =
+                        new MySqlCommand(query, con))
+                    {
+                        command.Parameters.AddWithValue(
+                            "@userId",
+                            userId);
+
+                        int changedRows =
+                            command.ExecuteNonQuery();
+
+                        if (changedRows == 0)
+                        {
+                            return "The user account was not found.";
+                        }
+                    }
+                }
+
+                return "User account deleted successfully.";
+            }
+            catch (Exception e)
+            {
+                return "Unable to delete the user. Error: " + e.Message;
             }
         }
 
