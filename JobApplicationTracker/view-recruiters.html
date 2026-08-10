@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
 
     <meta name="description"
-          content="View and manage recuriter contacts connected to job applications." />
+          content="View and manage recruiter contacts connected to job applications." />
 
     <title>Recruiter Contacts - In Formation Jobs</title>
 
@@ -12,7 +12,7 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css">
 
-    <script>
+    <script type="text/javascript">
         var allRecruiters = [];
         var filteredRecruiters = [];
 
@@ -102,28 +102,26 @@
             var selectedFollowUp = $("#followUpFilter").val();
 
             filteredRecruiters = allRecruiters.filter(function (recruiter) {
-                        var searchableText =
-                            (
-                                (recruiter.FirstName || "") +
-                                " " +
-                                (recruiter.LastName || "") +
-                                " " +
-                                (recruiter.CompanyName || "") +
-                                " " +
-                                (recruiter.Email || "") +
-                                " " +
-                                (recruiter.JobTitle || "")
-                            ).toLowerCase();
 
-                        var matchesSearch = searchableText.includes(searchText);
+                var searchableText =
+                    (
+                        (recruiter.FirstName || "") +
+                        " " +
+                        (recruiter.LastName || "") +
+                        " " +
+                        (recruiter.CompanyName || "") +
+                        " " +
+                        (recruiter.Email || "") +
+                        " " +
+                        (recruiter.JobTitle || "")
+                    ).toLowerCase();
 
-                        var matchesCompany = selectedCompany == "All" || recruiter.CompanyName == selectedCompany;
+                var matchesSearch = searchableText.includes(searchText);
+                var matchesCompany = selectedCompany == "All" || recruiter.CompanyName == selectedCompany;
+                var matchesFollowUp = DoesRecruiterMatchFollowUp(recruiter, selectedFollowUp);
 
-                        var matchesFollowUp = DoesRecruiterMatchFollowUp(recruiter, selectedFollowUp);
-
-                        return (matchesSearch && matchesCompany && matchesFollowUp);
-                    }
-                );
+                return (matchesSearch && matchesCompany && matchesFollowUp);
+            });
 
             SortRecruiters();
             DisplayRecruiters();
@@ -158,24 +156,6 @@
             return true;
         }
 
-
-        /*
-            Removes time from today's date so reminder dates
-            can be compared consistently.
-        */
-
-        function GetTodayWithoutTime() {
-
-            var today = new Date();
-
-            return new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                today.getDate()
-            );
-        }
-
-
         /*
             Sorts the currently filtered recruiter list.
         */
@@ -200,38 +180,17 @@
                         );
                     }
 
-                    var firstName = (firstRecruiter.FirstName +" " + firstRecruiter.LastName).trim();
+                    var firstName = (firstRecruiter.FirstName + " " + firstRecruiter.LastName).trim();
 
-                    var secondName =(secondRecruiter.FirstName + " " + secondRecruiter.LastName).trim();
+                    var secondName = (secondRecruiter.FirstName + " " + secondRecruiter.LastName).trim();
 
-                    if (selectedSort == "nameAscending"
-                    ) {
+                    if (selectedSort == "nameAscending") {
                         return firstName.localeCompare(secondName);
                     }
 
                     return secondName.localeCompare(firstName);
                 }
             );
-        }
-
-
-        /*
-            Converts a date value into a sortable number.
-        */
-
-        function GetDateValue(value) {
-
-            if (!value) {
-                return 0;
-            }
-
-            var date = new Date(value + "T00:00:00");
-
-            if (isNaN(date.getTime())) {
-                return 0;
-            }
-
-            return date.getTime();
         }
 
 
@@ -245,12 +204,10 @@
 
             tableBody.empty();
 
-            $("#recruiterCountMessage").text("Showing " + filteredRecruiters.length +" recruiter" +
-                (
-                    filteredRecruiters.length == 1
-                        ? ""
-                        : "s"
-                )
+            $("#recruiterCountMessage").text("Showing " + filteredRecruiters.length +
+                (filteredRecruiters.length == 1
+                        ? "recruiter."
+                        : "recruiters.")
             );
 
             if (filteredRecruiters.length == 0) {
@@ -268,7 +225,7 @@
             filteredRecruiters.forEach(
                 function (recruiter) {
 
-                    var recruiterName = (recruiter.FirstName + " " +recruiter.LastName).trim();
+                    var recruiterName = (recruiter.FirstName + " " + recruiter.LastName).trim();
 
                     var row =
                         "<tr>" +
@@ -337,8 +294,7 @@
             Creates overdue, upcoming, or no-reminder badges.
         */
 
-        function BuildReminderBadge(
-            followUpDate) {
+        function BuildReminderBadge(followUpDate) {
 
             if (!followUpDate) {
                 return (
@@ -349,7 +305,7 @@
                 );
             }
 
-            var reminderDate =  new Date(followUpDate + "T00:00:00");
+            var reminderDate = new Date(followUpDate + "T00:00:00");
 
             var today = GetTodayWithoutTime();
 
@@ -388,15 +344,6 @@
                 "</div>"
             );
         }
-
-
-        /*
-            Placeholder action functions.
-
-            These can later redirect to real pages or call
-            ProjectServices methods.
-        */
-
 
         function EditRecruiter(recruiterId) {
             window.location.href =
@@ -462,86 +409,30 @@
     <style>
 
         /*
-            Recruiters page heading
+        White cards used by the filter and table sections.
+        */
 
-            General page width and breadcrumbs come from site.css.
-            */
-
-        .pageHeadingRow {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .pageHeading h2 {
-            margin: 0 0 8px;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .pageHeading p {
-            margin: 0;
-            color: #64748b;
-            font-size: 16px;
-        }
-
-        .addRecruiterButton {
-            flex-shrink: 0;
-            text-decoration: none;
+        .recruitersCard + .recruitersCard {
+            margin-top: 22px;
         }
 
 
         /*
-                White cards used by the filter and table sections.
-            */
+            Recruiter filters
 
-        .recruitersCard {
-            margin-bottom: 22px;
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
+            Labels and controls use the shared .formField
+            styling from site.css.
+        */
+
+        .recruiterFilters .clearFiltersArea .secondaryButton {
+            width: 100%;
+            margin-top: 21px;
         }
 
 
         /*
-                Recruiter filters
-
-                Labels and controls use the shared .formField
-                styling from site.css.
-            */
-
-        .recruiterFilters {
-            display: grid;
-            grid-template-columns: 1.25fr 1fr 0.95fr 0.95fr auto;
-            gap: 18px;
-            align-items: end;
-        }
-
-            .recruiterFilters .formField {
-                margin-bottom: 0;
-            }
-
-        .clearFiltersArea {
-            display: flex;
-            align-items: flex-end;
-            height: 100%;
-        }
-
-            .clearFiltersArea .secondaryButton {
-                width: 100%;
-                min-height: 43px;
-                margin-top: 21px;
-                white-space: nowrap;
-            }
-
-
-        /*
-                Recruiter table heading.
-            */
+            Recruiter table heading.
+        */
 
         .tableHeadingRow {
             display: flex;
@@ -564,43 +455,12 @@
 
 
         /*
-                Recruiter table.
-            */
-
-        .tableWrapper {
-            width: 100%;
-            overflow-x: auto;
-        }
+            Recruiter table.
+        */
 
         .recruitersTable {
-            width: 100%;
             min-width: 1120px;
-            border-collapse: collapse;
         }
-
-            .recruitersTable th,
-            .recruitersTable td {
-                padding: 15px 12px;
-                border-bottom: 1px solid #e2e8f0;
-                text-align: left;
-                vertical-align: middle;
-            }
-
-            .recruitersTable th {
-                background-color: #f8fafc;
-                color: #475569;
-                font-size: 12px;
-                white-space: nowrap;
-            }
-
-            .recruitersTable td {
-                color: #334155;
-                font-size: 13px;
-            }
-
-            .recruitersTable tbody tr:hover {
-                background-color: #f8fafc;
-            }
 
         .recruiterName {
             color: #0f172a;
@@ -608,25 +468,12 @@
             white-space: nowrap;
         }
 
-        .tableLink {
-            color: #1556d8;
-            text-decoration: none;
-        }
-
-            .tableLink:hover {
-                text-decoration: underline;
-            }
-
-        .emptyTableMessage {
-            padding: 34px;
-            color: #64748b;
-            text-align: center;
-        }
+        
 
 
         /*
-                Follow-up reminder badges.
-            */
+            Follow-up reminder badges.
+        */
 
         .reminderBadge {
             display: inline-block;
@@ -761,12 +608,12 @@
 
             <a class="primaryButton addRecruiterButton"
                href="add-recruiter.html">
-                + Add Recruiter
+                Add Recruiter
             </a>
 
         </div>
 
-        <section class="recruitersCard">
+        <section class=" contentCard recruitersCard">
 
             <div class="recruiterFilters">
 
@@ -868,7 +715,7 @@
 
         </section>
 
-        <section class="recruitersCard">
+        <section class="contentCard recruitersCard">
 
             <div class="tableHeadingRow">
 
@@ -884,7 +731,7 @@
 
             <div class="tableWrapper">
 
-                <table class="recruitersTable">
+                <table class="dataTable recruitersTable">
 
                     <thead>
 

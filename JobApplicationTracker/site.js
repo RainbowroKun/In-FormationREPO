@@ -2,10 +2,22 @@
 
     if (!value) {return "—";}
 
+    var dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+
+    if (dateOnlyMatch) {
+        var localDate =
+            new Date(
+                Number(dateOnlyMatch[1]),
+                Number(dateOnlyMatch[2]) - 1,
+                Number(dateOnlyMatch[3])
+            );
+
+        return localDate.toLocaleDateString();
+    }
+
     var date = new Date(value);
 
     if (isNaN(date.getTime())) {return value;}
-
     return date.toLocaleDateString();
 }
 
@@ -29,6 +41,59 @@ function ShowPageMessage(message, messageType) {
     }
 }
 
+function GetDateValue(value) {
+
+    if (!value) { return 0; }
+
+    var dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+
+    var date;
+
+    if (dateOnlyMatch) {
+        date =
+            new Date(
+                Number(dateOnlyMatch[1]),
+                Number(dateOnlyMatch[2]) - 1,
+                Number(dateOnlyMatch[3])
+            );
+    }
+    else {
+        date = new Date(value);
+    }
+
+    if (isNaN(date.getTime())) { return 0; }
+
+    return date.getTime();
+}
+
+function GetTodayWithoutTime() {
+
+    var today = new Date();
+
+    return new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+    );
+}
+
+function FormatFileSize(fileSize) {
+    var size = Number(fileSize);
+
+    if (!size || size < 0) {
+        return "—";
+    }
+
+    if (size < 1024) {
+        return size + " bytes";
+    }
+
+    if (size < 1024 * 1024) {
+        return Math.round(size / 1024) + " KB";
+    }
+
+    return (size / (1024 * 1024)).toFixed(2) + " MB";
+}
 
 function ClearPageMessage() {
 
@@ -153,7 +218,7 @@ function GetNavigationSource() {
     if (source == "applications") {
         return {
             Page: "view-applications.html",
-            Label: "Applications"
+            Label: "View Applications"
         };
     }
 

@@ -138,7 +138,7 @@ namespace JobApplicationTracker
                         insertCommand.ExecuteNonQuery();
                     }
                 }
-                return "Account request has been submitted. We will review the request as soon as we can!";
+                return "Success";
             }
             catch (Exception e)
             {
@@ -3528,7 +3528,10 @@ public class ApplicationEditDetails
                             a.application_id AS related_application_id,
                             a.job_title AS related_application_name,
                             a.notes,
-                            a.application_status AS record_status,
+                            CASE
+                                WHEN a.is_archived = 1 THEN 'Archived'
+                                ELSE a.application_status
+                            END AS record_status,
                             DATE_FORMAT(a.date_applied, '%Y-%m-%d') AS search_date,
                             DATE_FORMAT(a.updated_at, '%Y-%m-%d') AS last_updated
                         FROM applications a
@@ -3566,17 +3569,17 @@ public class ApplicationEditDetails
                             'Document' AS record_type,
                             d.document_id AS record_id,
                             d.file_name AS title,
-                            a.company_name,
-                            a.application_id AS related_application_id,
-                            a.job_title AS related_application_name,
+                            COALESCE(a.company_name, '') AS company_name,
+                            COALESCE(a.application_id, 0) AS related_application_id,
+                            COALESCE(a.job_title, '') AS related_application_name,
                             d.notes,
                             '' AS record_status,
                             DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS search_date,
                             DATE_FORMAT(d.uploaded_at, '%Y-%m-%d') AS last_updated
                         FROM documents d
-                        INNER JOIN application_documents ad
+                        LEFT JOIN application_documents ad
                             ON d.document_id = ad.document_id
-                        INNER JOIN applications a
+                        LEFT JOIN applications a
                             ON ad.application_id = a.application_id
                         INNER JOIN users u
                             ON a.user_id = u.user_id

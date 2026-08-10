@@ -10,7 +10,7 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
-    <link rel="stylesheet" href="site.css">
+    <link rel="stylesheet" href="site.css"/>
 
     <script type="text/javascript">
 
@@ -43,8 +43,6 @@
                         return;
                     }
 
-                    $("#welcomeMessage").text(userInfo);
-
                     $("#signedInArea").show();
                     $("#userOptions").show();
 
@@ -61,7 +59,7 @@
                     console.log(xhr.responseText);
 
                     ShowPageMessage("Unable to load your account information.","error");
-                    $("#signedOutArea").show()
+                    $("#signedOutArea").show();
                 }
             });
         }
@@ -129,7 +127,7 @@
                 line-height: 1.4;
             }
 
-        .comingSoon {
+        .adminBadge {
             display: inline-block;
             margin-top: 12px;
             padding: 4px 8px;
@@ -280,7 +278,7 @@
                         user accounts.
                     </p>
 
-                    <span class="comingSoon">Admin Only</span>
+                    <span class="adminBadge">Admin Only</span>
                 </a>
 
                 <a class="optionCard adminCard"
@@ -288,11 +286,10 @@
                     <h3>Manage Users</h3>
 
                     <p>
-                        View users and change account roles or active
-                        status.
+                        View users, promote administrators, or delete user accounts.
                     </p>
 
-                    <span class="comingSoon">Admin Only</span>
+                    <span class="adminBadge">Admin Only</span>
                 </a>
 
             </div>

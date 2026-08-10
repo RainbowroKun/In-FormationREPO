@@ -2,12 +2,14 @@
 <html>
 <head>
     <meta charset="utf-8" />
+
     <meta name="description" content="Edit an existing job application." />
+
     <title>Edit Application - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="site.js?v=2"></script>
-    <link rel="stylesheet" href="site.css?v=2" />
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
 
     <script type="text/javascript">
         var applicationId = 0;
@@ -24,7 +26,8 @@
                 return;
             }
 
-            $("#applicationForm").submit(function (event) {
+            $("#applicationForm").on("submit", function (event) {
+
                 event.preventDefault();
                 UpdateApplication();
             });
@@ -136,86 +139,6 @@
             window.location.href = "view-applications.html";
         }
     </script>
-
-    <style>
-        .formCard {
-            padding: 32px 38px 24px;
-            background-color: white;
-            border-radius: 9px;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.13);
-        }
-
-        .formHeading {
-            margin-bottom: 26px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #d8dee8;
-        }
-
-        .formHeading h2 {
-            margin: 0 0 8px 0;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .formHeading p {
-            margin: 0;
-            color: #64748b;
-        }
-
-        .formSection {
-            margin-top: 28px;
-        }
-
-        .formSection:first-of-type {
-            margin-top: 0;
-        }
-
-        .sectionHeading {
-            margin: 0 0 18px 0;
-            padding-bottom: 9px;
-            border-bottom: 1px solid #d8dee8;
-            color: #1f3c88;
-            font-size: 21px;
-        }
-
-        .formGrid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px 22px;
-        }
-
-        .formField {
-            min-width: 0;
-        }
-
-        .fullWidth {
-            grid-column: 1 / -1;
-        }
-
-        .formActions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 14px;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #d8dee8;
-        }
-
-        .formActions .primaryButton,
-        .formActions .secondaryButton {
-            min-width: 145px;
-        }
-
-        @media (max-width: 700px) {
-            .formGrid {
-                grid-template-columns: 1fr;
-            }
-
-            .fullWidth {
-                grid-column: auto;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -245,11 +168,12 @@
             <span>Edit Application</span>
         </nav>
 
+        <div class="pageHeading formPageHeading">
+            <h2>Edit Application</h2>
+            <p>Update the saved information for this job application.</p>
+        </div>
+
         <main class="formCard">
-            <div class="formHeading">
-                <h2>Edit Application</h2>
-                <p>Update the saved information for this job application.</p>
-            </div>
 
             <form id="applicationForm">
                 <section class="formSection">

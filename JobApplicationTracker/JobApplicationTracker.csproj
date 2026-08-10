@@ -92,6 +92,7 @@
   <ItemGroup>
     <Content Include="account-requests.html" />
     <Content Include="add-application.html" />
+    <Content Include="add-document.html" />
     <Content Include="add-follow-up.html" />
     <Content Include="add-interview.html" />
     <Content Include="add-recruiter.html" />
@@ -100,6 +101,8 @@
     <Content Include="Database\users_and_account_requests_table_creation.sql" />
     <Content Include="documents-details.html" />
     <Content Include="edit-application.html" />
+    <Content Include="edit-interview.html" />
+    <Content Include="edit-recruiter.html" />
     <Content Include="Global.asax" />
     <Content Include="home-page.html" />
     <Content Include="index.html" />

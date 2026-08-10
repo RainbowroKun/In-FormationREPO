@@ -3,18 +3,15 @@
 <head>
     <meta charset="utf-8" />
 
-    <meta name="description"
-          content="Add a recruiter contact and connect them to a job application." />
+    <meta name="description" content="Add a recruiter contact and connect them to a job application." />
 
     <title>Add Recruiter - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
 
-    <link rel="stylesheet"
-          href="site.css" />
-
-    <script>
+    <script type="text/javascript">
 
         $(document).ready(function () {
 
@@ -22,12 +19,11 @@
 
             LoadApplicationOptions();
 
-            $("#recruiterForm").submit(function (event) {
+            $("#recruiterForm").on("submit", function (event) {
 
-                    event.preventDefault();
-                    SaveRecruiter();
-                }
-            );
+                event.preventDefault();
+                SaveRecruiter();
+            });
 
             $("#clearRecruiterForm").on("click", ClearRecruiterForm);
         });
@@ -128,26 +124,7 @@
 
     <style>
 
-        /* Add Recruiter page heading. Page width and breadcrumb styling come from site.css.*/
-
-        .pageHeading {
-            margin-bottom: 22px;
-        }
-
-            .pageHeading h2 {
-                margin: 0 0 8px;
-                color: #0f172a;
-                font-size: 36px;
-            }
-
-            .pageHeading p {
-                margin: 0;
-                color: #64748b;
-                font-size: 16px;
-            }
-
-
-        /* Main recruiter form card.*/
+        /* Main recruiter form card. */
 
         .recruiterFormCard {
             padding: 28px;
@@ -170,16 +147,8 @@
             row-gap: 4px;
         }
 
-            .recruiterFormGrid .formField {
-                margin-bottom: 18px;
-            }
-
         .fullWidthField {
             grid-column: 1 / -1;
-        }
-
-        .twoColumnField {
-            grid-column: span 1;
         }
 
         #notes {
@@ -187,7 +156,7 @@
         }
 
 
-        /* Form footer buttons.*/
+        /* Form footer buttons. */
 
         .formActions {
             display: flex;
@@ -198,10 +167,6 @@
             padding: 18px 28px;
             border-top: 1px solid #e2e8f0;
             background-color: #ffffff;
-        }
-
-        .backToRecruitersButton {
-            text-decoration: none;
         }
 
         .rightFormActions {
@@ -216,7 +181,7 @@
             }
 
 
-        /* Small information note below the form.*/
+        /* Small information note below the form. */
 
         .recruiterFormNotice {
             margin: 20px 0 0;
@@ -232,9 +197,7 @@
 
         <div>
 
-            <h1>
-                In Formation Jobs
-            </h1>
+            <h1>In Formation Jobs</h1>
 
             <p>
                 Keep your job search organized and moving forward.
@@ -278,17 +241,13 @@
 
             <span>&gt;</span>
 
-            <span>
-                Add Recruiter
-            </span>
+            <span>Add Recruiter</span>
 
         </nav>
 
-        <div class="pageHeading">
+        <div class="pageHeading formPageHeading">
 
-            <h2>
-                Add Recruiter
-            </h2>
+            <h2>Add Recruiter</h2>
 
             <p>
                 Add a recruiter contact and connect them to one
@@ -421,7 +380,7 @@
 
                 <div class="formActions">
 
-                    <a class="secondaryButton backToRecruitersButton"
+                    <a class="secondaryButton"
                        href="view-recruiters.html">
                         Back to Recruiters
                     </a>

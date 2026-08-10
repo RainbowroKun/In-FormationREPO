@@ -9,7 +9,7 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-    <script>
+    <script type="text/javascript">
         var allDocuments = [];
 
         $(document).ready(function () {
@@ -81,7 +81,7 @@
             $("#documentCountMessage").text(
                 "Showing " +
                 documents.length +
-                (documents.length == 1 ? " document" : " documents")
+                (documents.length == 1 ? " document." : " documents.")
             );
 
             var tableBody = $("#documentsTableBody");
@@ -152,8 +152,8 @@
 
                 success: function (msg) {
                     if (msg.d == "Success") {
-                        ShowPageMessage("Document deleted successfully.", "success");
                         LoadDocuments();
+                        ShowPageMessage("Document deleted successfully.", "success");
                     }
                     else {
                         ShowPageMessage(msg.d, "error");
@@ -165,24 +165,6 @@
                     ShowPageMessage("Unable to delete the document.", "error");
                 }
             });
-        }
-
-        function FormatFileSize(fileSize) {
-            var size = Number(fileSize);
-
-            if (!size || size < 0) {
-                return "—";
-            }
-
-            if (size < 1024) {
-                return size + " bytes";
-            }
-
-            if (size < 1024 * 1024) {
-                return Math.round(size / 1024) + " KB";
-            }
-
-            return (size / (1024 * 1024)).toFixed(2) + " MB";
         }
 
         function GetDocumentTypeClass(documentType) {
@@ -225,29 +207,9 @@
     </script>
 
     <style>
-        .pageHeadingRow,
-        .summaryGrid,
         .tableControls,
         .rowActions {
             display: flex;
-        }
-
-        .pageHeadingRow {
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 22px;
-        }
-
-        .pageHeading h2 {
-            margin: 0 0 8px;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .pageHeading p {
-            margin: 0;
-            color: #64748b;
         }
 
         .documentSummaryGrid {
@@ -327,13 +289,8 @@
             background-color: #ede9fe;
         }
 
-        .documentsCard {
-            margin-bottom: 14px;
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
+        .documentsCard + .documentsCard {
+            margin-top: 14px;
         }
 
         .tableControls {
@@ -351,56 +308,18 @@
             max-width: 250px;
         }
 
-        .tableWrapper {
-            overflow-x: auto;
-        }
-
-        .documentsTable {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .documentsTable th,
-        .documentsTable td {
-            padding: 13px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        .documentsTable th {
-            background: #f8fafc;
-            color: #475569;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-
-        .documentsTable td {
-            color: #334155;
-            font-size: 13px;
-        }
-
-        .documentLink,
-        .tableLink {
+        .documentLink {
             color: #1556d8;
             font-weight: bold;
             text-decoration: none;
         }
 
-        .documentLink:hover,
-        .tableLink:hover {
-            text-decoration: underline;
-        }
+            .documentLink:hover {
+                text-decoration: underline;
+            }
 
         .rowActions {
-            gap: 12px;
             white-space: nowrap;
-        }
-
-        .emptyTableMessage {
-            padding: 34px !important;
-            color: #64748b !important;
-            text-align: center !important;
         }
 
         .deleteDocumentButton {
@@ -529,7 +448,7 @@
         <nav class="pageNav">
             <a href="home-page.html">Home</a>
             <span>&gt;</span>
-            <span>View Documents</span>
+            <span>Documents</span>
         </nav>
 
         <div class="pageHeadingRow">
@@ -538,7 +457,7 @@
                 <p>Review resumes, cover letters, and other files saved with your applications.</p>
             </div>
 
-            <a class="primaryButton" href="add-document.html"> + Add Document </a>
+            <a class="primaryButton pageActionButton" href="add-document.html"> + Add Document </a>
         </div>
 
         <p id="pageMessage"></p>
@@ -599,8 +518,8 @@
 
         </section>
 
-        <main class="documentsCard">
-            <section class="documentsCard">
+        <main>
+            <section class=" contentCard documentsCard">
 
                 <div class="cardHeadingRow">
 
@@ -647,7 +566,7 @@
             </section>
 
 
-            <section class="documentsCard">
+            <section class="contentCard documentsCard">
 
                 <div class="cardHeadingRow">
 
@@ -664,7 +583,7 @@
 
                 <div class="tableWrapper">
 
-                    <table class="documentsTable">
+                    <table class="dataTable">
 
                         <thead>
                             <tr>

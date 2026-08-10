@@ -43,8 +43,7 @@
 
 
         /*
-            Filters the temporary search records using text,
-            record type, and the selected date range.
+            Loads and filters search records.
         */
         function LoadSearchRecords() {
 
@@ -345,7 +344,7 @@
             }
 
             return (
-                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "'&source=search>" +
+                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "&source=search'>" +
                     EscapeHtml(record.RelatedApplicationName) +
                 "</a>"
             );
@@ -364,7 +363,10 @@
 
             var statusClass = "searchStatusApplied";
 
-            if (record.Status == "Interview") {
+            if (record.Status == "Archived") {
+                statusClass = "searchStatusArchived";
+            }
+            else if (record.Status == "Interview") {
                 statusClass = "searchStatusInterview";
             }
             else if (record.Status == "Offer") {
@@ -687,6 +689,11 @@
         .searchStatusRejected {
             background-color: #fee2e2;
             color: #dc2626;
+        }
+
+        .searchStatusArchived {
+            background-color: #e2e8f0;
+            color: #475569;
         }
     </style>
 </head>

@@ -21,7 +21,7 @@
      LoadUsers();
         });
 
-        function LoadUsers() {
+        function LoadUsers(successmessage) {
 
             $.ajax({
                 type: "POST",
@@ -39,6 +39,10 @@
                     $("#emptyUsersMessage").hide();
 
                     UpdateUserSummary(users);
+
+                    if (successMessage) {
+                        ShowPageMessage(successMessage, "success");
+                    }
 
                     if (users.length == 0) {
                         $("#emptyUsersMessage").show();
@@ -149,72 +153,80 @@
 
         function PromoteUser(userId) {
 
-    if (!confirm("Promote this user to administrator?")) {
-        return;
-    }
+            if (!confirm("Promote this user to administrator?")) {
+                return;
+            }
 
-    var parameters = JSON.stringify({
-        userId: userId
-    });
+            var parameters = JSON.stringify({
+                userId: userId
+            });
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/PromoteUser",
-        data: parameters,
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/PromoteUser",
+                data: parameters,
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
+                success: function (msg) {
 
-            ShowPageMessage(msg.d);
-            LoadUsers();
-        },
+                    if (msg.d == "User promoted successfully.") {
+                        LoadUsers(msg.d);
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
 
-        error: function (xhr) {
+                error: function (xhr) {
 
-            console.log(xhr.responseText);
+                    console.log(xhr.responseText);
 
-            ShowPageMessage(
-                "Unable to promote the user."
-            );
+                    ShowPageMessage(
+                        "Unable to promote the user."
+                    );
+                }
+            });
         }
-    });
-}
-function DeleteUser(userId) {
+        function DeleteUser(userId) {
 
-    if (!confirm("Delete this user account? This cannot be undone.")) {
-        return;
-    }
+            if (!confirm("Delete this user account? This cannot be undone.")) {
+                return;
+            }
 
-    var parameters = JSON.stringify({
-        userId: userId
-    });
+            var parameters = JSON.stringify({
+                userId: userId
+            });
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/DeleteUser",
-        data: parameters,
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/DeleteUser",
+                data: parameters,
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
+                success: function (msg) {
 
-            ShowPageMessage(msg.d);
-            LoadUsers();
-        },
+                    if (msg.d == "User account deleted successfully.") {
+                        LoadUsers(msg.d);
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
 
-        error: function (xhr) {
+                error: function (xhr) {
 
-            console.log(xhr.responseText);
+                    console.log(xhr.responseText);
 
-            ShowPageMessage(
-                "Unable to delete the user."
-            );
+                    ShowPageMessage(
+                        "Unable to delete the user."
+                    );
+                }
+            });
         }
-    });
-}
         function CheckAdminAccess() {
 
             $.ajax({
@@ -264,9 +276,23 @@ function DeleteUser(userId) {
             });
         }
 
-        function ShowPageMessage(message) {
+        function ShowPageMessage(message, type) {
 
-            $("#pageMessage").text(message);
+            var pageMessage =
+                $("#pageMessage");
+
+            pageMessage
+                .removeClass(
+                    "successMessage errorMessage"
+                )
+                .text(message);
+
+            if (type == "success") {
+                pageMessage.addClass("successMessage");
+            }
+            else {
+                pageMessage.addClass("errorMessage");
+            }
         }
 
     </script>
@@ -328,12 +354,6 @@ function DeleteUser(userId) {
             border-radius: 7px;
             background-color: #f8fafc;
             color: #64748b;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        #pageMessage {
-            color: #dc2626;
             text-align: center;
             font-weight: bold;
         }

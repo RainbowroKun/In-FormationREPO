@@ -12,10 +12,7 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-    <script>
-
-
-
+    <script type="text/javascript">
         $(document).ready(function () {
 
             LoadAccountInformation();
@@ -33,92 +30,92 @@
             UpdateLinkType();
         });
 
-function LoadFollowUpOptions() {
+        function LoadFollowUpOptions() {
 
-    LoadApplicationOptions();
-    LoadRecruiterOptions();
-}
-
-function LoadApplicationOptions() {
-
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/GetApplicationOptions",
-        contentType: "application/json; charset=utf-8",
-        data: "{}",
-        dataType: "json",
-
-        success: function (response) {
-
-            var applications = response.d || [];
-
-            $("#applicationId").empty();
-
-            $("#applicationId").append(
-                $("<option>")
-                    .val("")
-                    .text("Select an application")
-                    .prop("disabled", true)
-                    .prop("selected", true)
-            );
-
-            applications.forEach(function (application) {
-
-                $("#applicationId").append(
-                    $("<option>")
-                        .val(application.ApplicationId)
-                        .text(application.CompanyName + " - " + application.JobTitle)
-                );
-            });
-        },
-
-        error: function () {
-            ShowPageMessage("Unable to load applications.", "error");
+            LoadApplicationOptions();
+            LoadRecruiterOptions();
         }
-    });
-}
 
-function LoadRecruiterOptions() {
+        function LoadApplicationOptions() {
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/GetRecruiters",
-        contentType: "application/json; charset=utf-8",
-        data: "{}",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplicationOptions",
+                contentType: "application/json; charset=utf-8",
+                data: "{}",
+                dataType: "json",
 
-        success: function (response) {
+                success: function (response) {
 
-            var recruiters = response.d || [];
+                    var applications = response.d || [];
 
-            $("#recruiterId").empty();
+                    $("#applicationId").empty();
 
-            $("#recruiterId").append(
-                $("<option>")
-                    .val("")
-                    .text("Select a recruiter")
-                    .prop("disabled", true)
-                    .prop("selected", true)
-            );
+                    $("#applicationId").append(
+                        $("<option>")
+                            .val("")
+                            .text("Select an application")
+                            .prop("disabled", true)
+                            .prop("selected", true)
+                    );
 
-            recruiters.forEach(function (recruiter) {
+                    applications.forEach(function (application) {
 
-                var recruiterName =
-                    (recruiter.FirstName + " " + recruiter.LastName).trim();
+                        $("#applicationId").append(
+                            $("<option>")
+                                .val(application.ApplicationId)
+                                .text(application.CompanyName + " - " + application.JobTitle)
+                        );
+                    });
+                },
 
-                $("#recruiterId").append(
-                    $("<option>")
-                        .val(recruiter.RecruiterId)
-                        .text(recruiterName + " - " + recruiter.CompanyName)
-                );
+                error: function () {
+                    ShowPageMessage("Unable to load applications.", "error");
+                }
             });
-        },
-
-        error: function () {
-            ShowPageMessage("Unable to load recruiters.", "error");
         }
-    });
-}
+
+        function LoadRecruiterOptions() {
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetRecruiters",
+                contentType: "application/json; charset=utf-8",
+                data: "{}",
+                dataType: "json",
+
+                success: function (response) {
+
+                    var recruiters = response.d || [];
+
+                    $("#recruiterId").empty();
+
+                    $("#recruiterId").append(
+                        $("<option>")
+                            .val("")
+                            .text("Select a recruiter")
+                            .prop("disabled", true)
+                            .prop("selected", true)
+                    );
+
+                    recruiters.forEach(function (recruiter) {
+
+                        var recruiterName =
+                            (recruiter.FirstName + " " + recruiter.LastName).trim();
+
+                        $("#recruiterId").append(
+                            $("<option>")
+                                .val(recruiter.RecruiterId)
+                                .text(recruiterName + " - " + recruiter.CompanyName)
+                        );
+                    });
+                },
+
+                error: function () {
+                    ShowPageMessage("Unable to load recruiters.", "error");
+                }
+            });
+        }
 
 
 
@@ -157,15 +154,6 @@ function LoadRecruiterOptions() {
             $("#applicationId").prop("disabled", false);
         }
 
-
-        /*
-            Placeholder save behavior.
-
-            The backend version can update either:
-            applications.follow_up_date
-            recruiters.follow_up_date
-        */
-
         function SaveFollowUp() {
 
             var form =
@@ -196,43 +184,43 @@ function LoadRecruiterOptions() {
             };
 
             $("#saveFollowUpButton")
-    .prop("disabled", true)
-    .text("Saving...");
+            .prop("disabled", true)
+            .text("Saving...");
 
-$.ajax({
-    type: "POST",
-    url: "ProjectServices.asmx/SetFollowUpDate",
-    contentType: "application/json; charset=utf-8",
-    data: JSON.stringify(parameters),
-    dataType: "json",
+        $.ajax({
+            type: "POST",
+            url: "ProjectServices.asmx/SetFollowUpDate",
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify(parameters),
+            dataType: "json",
 
-    success: function (response) {
+            success: function (response) {
 
-        var message = response.d || "";
+                var message = response.d || "";
 
-        if (message.toLowerCase().includes("successfully")) {
-            ShowPageMessage(message, "success");
-            ClearFollowUpForm();
-        }
-        else {
-            ShowPageMessage(message, "error");
-        }
-    },
+                if (message.toLowerCase().includes("successfully")) {
+                    ShowPageMessage(message, "success");
+                    ClearFollowUpForm();
+                }
+                else {
+                    ShowPageMessage(message, "error");
+                }
+            },
 
-    error: function () {
-        ShowPageMessage(
-            "Unable to connect to the server.",
-            "error"
-        );
-    },
+            error: function () {
+                ShowPageMessage(
+                    "Unable to connect to the server.",
+                    "error"
+                );
+            },
 
-    complete: function () {
-        $("#saveFollowUpButton")
-            .prop("disabled", false)
-            .text("Save Follow-Up");
-    }
-});
-        }
+            complete: function () {
+                $("#saveFollowUpButton")
+                    .prop("disabled", false)
+                    .text("Save Follow-Up");
+            }
+        });
+                }
 
 
         /*
@@ -250,7 +238,6 @@ $.ajax({
             $("#recruiterId").val("");
             $("#followUpDate").val("");
 
-            ClearPageMessage();
             UpdateLinkType();
         }
     </script>
