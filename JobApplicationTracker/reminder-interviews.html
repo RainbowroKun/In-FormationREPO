@@ -12,7 +12,7 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-    <script>
+    <script type="text/javascript">
         var allFollowUps = [];
         var allInterviews = [];
 
@@ -115,7 +115,7 @@
             });
 
             allInterviews.forEach(function (interview) {
-                var interviewDateTime = ParseServiceDate(interview.InterviewDate);
+                var interviewDateTime = ParseDateTime(interview.InterviewDate);
 
                 if (interviewDateTime &&
                     interviewDateTime >= currentDateTime &&
@@ -173,7 +173,7 @@
                 var row =
                     "<tr>" +
                         "<td>" +
-                            FormatDate(followUp.FollowUpDate) +
+                            FormatReminderDate(followUp.FollowUpDate) +
                         "</td>" +
                         "<td>" +
                             BuildFollowUpTypeBadge(followUp.FollowUpType) +
@@ -220,8 +220,9 @@
                 var interviewerName = interview.InterviewerName || interview.RecruiterName || "—";
                 var recruiterName = "";
 
-                if (interview.InterviewerName && interview.RecruiterName) 
-                    {recruiterName = interview.RecruiterName;}
+                if (interview.InterviewerName && interview.RecruiterName) {
+                    recruiterName = interview.RecruiterName;
+                }
 
                 var row =
                     "<tr>" +
@@ -458,16 +459,6 @@
             return isNaN(date.getTime()) ? null : date;
         }
 
-        function GetTodayWithoutTime() {
-            var today = new Date();
-
-            return new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                today.getDate()
-            );
-        }
-
         function ParseDateTime(value) {
             if (!value) {
                 return null;
@@ -510,7 +501,7 @@
             return dateTime ? dateTime.getTime() : 0;
         }
 
-        function FormatDate(value) {
+        function FormatReminderDate(value) {
             var date = ParseDateOnly(value);
 
             if (!date) {
@@ -556,47 +547,12 @@
 
     <style>
 
-        /*
-            Reminders and Interviews page heading.
-
-            Shared page width and breadcrumbs come from site.css.
-        */
-
-        .pageHeadingRow {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 24px;
-            margin-bottom: 22px;
-        }
-
-        .pageHeading h2 {
-            margin: 0 0 8px;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .pageHeading p {
-            margin: 0;
-            color: #64748b;
-            font-size: 16px;
-        }
-
         .headingActions {
             display: flex;
             align-items: center;
             gap: 12px;
             flex-shrink: 0;
         }
-
-            .headingActions a {
-                text-decoration: none;
-            }
-
-
-        /*
-            Summary cards.
-        */
 
         .reminderSummaryGrid {
             display: grid;
@@ -675,18 +631,8 @@
                 background-color: #ede9fe;
             }
 
-
-        /*
-            Follow-up and interview cards.
-        */
-
         .scheduleCard {
             margin-bottom: 20px;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
         }
 
         .cardHeadingRow {
@@ -713,45 +659,9 @@
                 min-width: 150px;
             }
 
-
-        /*
-            Tables.
-        */
-
-        .tableWrapper {
-            width: 100%;
-            overflow-x: auto;
-        }
-
         .scheduleTable {
-            width: 100%;
             min-width: 1050px;
-            border-collapse: collapse;
         }
-
-            .scheduleTable th,
-            .scheduleTable td {
-                padding: 13px 12px;
-                border-bottom: 1px solid #e2e8f0;
-                text-align: left;
-                vertical-align: middle;
-            }
-
-            .scheduleTable th {
-                background-color: #f8fafc;
-                color: #475569;
-                font-size: 12px;
-                white-space: nowrap;
-            }
-
-            .scheduleTable td {
-                color: #334155;
-                font-size: 13px;
-            }
-
-            .scheduleTable tbody tr:hover {
-                background-color: #f8fafc;
-            }
 
         .secondaryTableText {
             display: block;
@@ -763,26 +673,6 @@
         .locationCell {
             max-width: 220px;
         }
-
-        .emptyTableMessage {
-            padding: 34px;
-            color: #64748b;
-            text-align: center;
-        }
-
-        .tableLink {
-            color: #1556d8;
-            text-decoration: none;
-        }
-
-            .tableLink:hover {
-                text-decoration: underline;
-            }
-
-
-        /*
-            Follow-up and interview badges.
-        */
 
         .followUpTypeBadge,
         .followUpStatusBadge,
@@ -848,18 +738,9 @@
             color: #1d4ed8;
         }
 
-
-        /*
-            Table actions and footer.
-        */
-
         .rowActions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
             white-space: nowrap;
         }
-
         .deleteTextButton {
             padding: 0;
             border: none;
@@ -878,11 +759,6 @@
             margin: 0;
             color: #64748b;
             font-size: 13px;
-        }
-
-        .interviewOther {
-            background-color: #f1f5f9;
-            color: #475569;
         }
     </style>
 </head>
@@ -1028,7 +904,7 @@
 
         </section>
 
-        <section class="scheduleCard">
+        <section class="contentCard scheduleCard">
 
             <div class="cardHeadingRow">
 
@@ -1069,7 +945,7 @@
 
             <div class="tableWrapper">
 
-                <table class="scheduleTable">
+                <table class="dataTable scheduleTable">
 
                     <thead>
                         <tr>
@@ -1098,7 +974,7 @@
 
             <div class="tableWrapper">
 
-                <table class="scheduleTable">
+                <table class="dataTable scheduleTable">
 
                     <thead>
                         <tr>

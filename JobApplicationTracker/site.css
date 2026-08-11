@@ -104,7 +104,7 @@ header {
 .pageHeading p {
     margin: 0;
     color: #64748b;
-    font-size: 17px;
+    font-size: 16px;
 }
 
 .formPageHeading {
@@ -210,11 +210,30 @@ header {
         .formCard .formActions .secondaryButton {
             min-width: 145px;
         }
+
 .rowActions {
     display: flex;
     align-items: center;
     gap: 12px;
 }
+
+.fullWidthField {
+    grid-column: 1 / -1;
+}
+
+.rightFormActions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+    .rightFormActions .secondaryButton {
+        min-width: 110px;
+    }
+
+    .rightFormActions .primaryButton {
+        min-width: 150px;
+    }
 
 /* Shared tables */
 
@@ -390,4 +409,41 @@ header {
 
 .successMessage {
     color: #15803d;
+}
+
+.normalMessage {
+    color: #475569;
+}
+
+/* Administrator pages */
+
+.toggleButtons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.toggleButton {
+    padding: 10px 18px;
+    border: 1px solid #1f3c88;
+    border-radius: 6px;
+    background-color: white;
+    color: #1f3c88;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+    .toggleButton:hover {
+        background-color: #eef2f7;
+    }
+
+    .toggleButton.activeToggle {
+        background-color: #1f3c88;
+        color: white;
+    }
+
+.adminPageHeading {
+    margin-bottom: 26px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #d8dee8;
 }

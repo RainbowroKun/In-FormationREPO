@@ -428,26 +428,6 @@
 
 
     <style>
-        /*
-            View Applications page heading.
-
-            General page width and breadcrumbs come
-            from site.css.
-        */
-
-        .pageHeadingRow {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 28px;
-        }
-
-        .addApplicationButton {
-            flex-shrink: 0;
-            text-decoration: none;
-        }
-
 
         /*
             Application summary cards.
@@ -507,19 +487,6 @@
             border-color: #ddd6fe;
             background-color: #faf5ff;
             color: #7c3aed;
-        }
-
-
-        /*
-            Applications table card.
-        */
-
-        .applicationsCard {
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
         }
 
 
@@ -742,7 +709,7 @@
                 </p>
             </div>
 
-            <a class="primaryButton addApplicationButton"
+            <a class="primaryButton pageActionButton"
             href="add-application.html">
                 Add Application
             </a>
@@ -778,7 +745,7 @@
 
         </section>
 
-        <main class="applicationsCard">
+        <main class="contentCard">
 
             <div class="tableControls">
 

@@ -11,202 +11,174 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-<script type="text/javascript">
-    $(document).ready(function () {
-        LoadAccountInformation();
-        LoadApplicationOptions();
+    <script type="text/javascript">
 
-        $("#documentForm").submit(function (event) {
-            event.preventDefault();
-            AddDocument();
-        });
+        $(document).ready(function () {
+            LoadAccountInformation();
+            LoadApplicationOptions();
 
-        $("#applicationId").on("change", UpdateApplicationNotes);
-    });
-
-
-    function LoadApplicationOptions() {
-        $.ajax({
-            type: "POST",
-            url: "ProjectServices.asmx/GetApplications",
-            data: "{}",
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-
-            success: function (msg) {
-                var applications = msg.d || [];
-                var applicationSelect = $("#applicationId");
-
-                applicationSelect.empty();
-
-                applicationSelect.append(
-                    "<option value=''>Do not link to an application</option>"
-                );
-
-                applications.forEach(function (application) {
-                    applicationSelect.append(
-                        $("<option>")
-                            .val(application.ApplicationId)
-                            .text(application.CompanyName + " — " + application.JobTitle)
-                    );
-                });
-
-                UpdateApplicationNotes();
-            },
-
-            error: function (xhr) {
-                console.log(xhr.responseText);
-                ShowPageMessage("Unable to load applications.", "error");
-            }
-        });
-    }
-
-
-    function UpdateApplicationNotes() {
-        var hasApplication = $("#applicationId").val() != "";
-
-        $("#applicationNotes")
-            .prop("disabled", !hasApplication);
-
-        if (!hasApplication) {
-            $("#applicationNotes").val("");
-        }
-    }
-
-
-    function AddDocument() {
-        var form = document.getElementById("documentForm");
-
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-
-        ClearPageMessage();
-
-        var file = $("#documentFile")[0].files[0];
-
-        if (!file) {
-            ShowPageMessage("Please choose a file.", "error");
-            return;
-        }
-
-        var maximumFileSize = 5 * 1024 * 1024;
-
-        if (file.size > maximumFileSize) {
-            ShowPageMessage(file.name + " is larger than the 5 MB limit.", "error");
-            return;
-        }
-
-        $("#addDocumentButton").prop("disabled", true);
-
-        var reader = new FileReader();
-
-        reader.onload = function (event) {
-            var fileResult = event.target.result;
-            var base64 = fileResult.split(",")[1];
-
-            var applicationId =
-                parseInt($("#applicationId").val(), 10);
-
-            if (isNaN(applicationId)) {
-                applicationId = 0;
-            }
-
-            var parameters = JSON.stringify({
-                documentType: $("#documentType").val(),
-                fileName: file.name,
-                contentType: file.type || "application/octet-stream",
-                fileBase64: base64,
-                documentNotes: $("#documentNotes").val().trim(),
-                applicationId: applicationId,
-                applicationNotes: $("#applicationNotes").val().trim()
+            $("#documentForm").submit(function (event) {
+                event.preventDefault();
+                AddDocument();
             });
 
+            $("#applicationId").on("change", UpdateApplicationNotes);
+            $("#clearDocumentForm").on("click", ClearDocumentForm);
+        });
+
+
+        function LoadApplicationOptions() {
             $.ajax({
                 type: "POST",
-                url: "ProjectServices.asmx/AddDocument",
-                data: parameters,
+                url: "ProjectServices.asmx/GetApplications",
+                data: "{}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
 
                 success: function (msg) {
-                    if (msg.d == "Success") {
-                        ShowPageMessage("Document added successfully.", "success");
-                        form.reset();
-                        UpdateApplicationNotes();
-                    }
-                    else {
-                        ShowPageMessage(msg.d, "error");
-                    }
+                    var applications = msg.d || [];
+                    var applicationSelect = $("#applicationId");
+
+                    applicationSelect.empty();
+
+                    applicationSelect.append(
+                        "<option value=''>Do not link to an application</option>"
+                    );
+
+                    applications.forEach(function (application) {
+                        applicationSelect.append(
+                            $("<option>")
+                                .val(application.ApplicationId)
+                                .text(application.CompanyName + " — " + application.JobTitle)
+                        );
+                    });
+
+                    UpdateApplicationNotes();
                 },
 
                 error: function (xhr) {
                     console.log(xhr.responseText);
-                    ShowPageMessage("Unable to add the document.", "error");
-                },
-
-                complete: function () {
-                    $("#addDocumentButton").prop("disabled", false);
+                    ShowPageMessage("Unable to load applications.", "error");
                 }
             });
-        };
-
-        reader.onerror = function () {
-            $("#addDocumentButton").prop("disabled", false);
-            ShowPageMessage("Unable to read the selected file.", "error");
-        };
-
-        reader.readAsDataURL(file);
-    }
-</script>
-
-<style>
-        /* Add Document page heading. Page width and breadcrumb styling come from site.css. */
-
-        .pageHeading {
-            margin-bottom: 22px;
         }
 
-            .pageHeading h2 {
-                margin: 0 0 8px;
-                color: #0f172a;
-                font-size: 36px;
+
+        function UpdateApplicationNotes() {
+            var hasApplication = $("#applicationId").val() != "";
+
+            $("#applicationNotes")
+                .prop("disabled", !hasApplication);
+
+            if (!hasApplication) {
+                $("#applicationNotes").val("");
+            }
+        }
+
+        function ClearDocumentForm() {
+            document.getElementById("documentForm").reset();
+            UpdateApplicationNotes();
+            ClearPageMessage();
+        }
+
+        function AddDocument() {
+            var form = document.getElementById("documentForm");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
             }
 
-            .pageHeading p {
-                margin: 0;
-                color: #64748b;
-                font-size: 16px;
+            ClearPageMessage();
+
+            var file = $("#documentFile")[0].files[0];
+
+            if (!file) {
+                ShowPageMessage("Please choose a file.", "error");
+                return;
             }
 
+            var maximumFileSize = 5 * 1024 * 1024;
 
-        /* Main document form card. */
+            if (file.size > maximumFileSize) {
+                ShowPageMessage(file.name + " is larger than the 5 MB limit.", "error");
+                return;
+            }
+
+            $("#addDocumentButton").prop("disabled", true);
+
+            var reader = new FileReader();
+
+            reader.onload = function (event) {
+                var fileResult = event.target.result;
+                var base64 = fileResult.split(",")[1];
+
+                var applicationId =
+                    parseInt($("#applicationId").val(), 10);
+
+                if (isNaN(applicationId)) {
+                    applicationId = 0;
+                }
+
+                var parameters = JSON.stringify({
+                    documentType: $("#documentType").val(),
+                    fileName: file.name,
+                    contentType: file.type || "application/octet-stream",
+                    fileBase64: base64,
+                    documentNotes: $("#documentNotes").val().trim(),
+                    applicationId: applicationId,
+                    applicationNotes: $("#applicationNotes").val().trim()
+                });
+
+                $.ajax({
+                    type: "POST",
+                    url: "ProjectServices.asmx/AddDocument",
+                    data: parameters,
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+
+                    success: function (msg) {
+                        if (msg.d == "Success") {
+                            ShowPageMessage("Document added successfully.", "success");
+                            form.reset();
+                            UpdateApplicationNotes();
+                        }
+                        else {
+                            ShowPageMessage(msg.d, "error");
+                        }
+                    },
+
+                    error: function (xhr) {
+                        console.log(xhr.responseText);
+                        ShowPageMessage("Unable to add the document.", "error");
+                    },
+
+                    complete: function () {
+                        $("#addDocumentButton").prop("disabled", false);
+                    }
+                });
+            };
+
+            reader.onerror = function () {
+                $("#addDocumentButton").prop("disabled", false);
+                ShowPageMessage("Unable to read the selected file.", "error");
+            };
+
+            reader.readAsDataURL(file);
+        }
+    </script>
+
+    <style>
 
         .documentFormCard {
             padding: 28px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
         }
-
-
-        /* Document form grid. Shared .formField styles come from site.css. */
 
         .documentFormGrid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             column-gap: 26px;
             row-gap: 4px;
-        }
-
-            .documentFormGrid .formField {
-                margin-bottom: 18px;
-            }
-
-        .fullWidthField {
-            grid-column: 1 / -1;
         }
 
         #documentNotes {
@@ -242,9 +214,6 @@
                 font-size: 13px;
             }
 
-
-        /* Form footer buttons. */
-
         .formActions {
             display: flex;
             align-items: center;
@@ -256,30 +225,12 @@
             background-color: #ffffff;
         }
 
-        .backToDocumentsButton {
-            text-decoration: none;
-        }
-
-        .rightFormActions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-            .rightFormActions .secondaryButton,
-            .rightFormActions .primaryButton {
-                min-width: 120px;
-            }
-
-
-        /* Small note below the form. */
-
         .documentFormNotice {
             margin: 20px 0 0;
             color: #64748b;
             font-size: 13px;
         }
-</style>
+    </style>
 </head>
 
 <body>
@@ -340,7 +291,7 @@
 
         </nav>
 
-        <div class="pageHeading">
+        <div class="pageHeading formPageHeading">
 
             <h2>
                 Add Document
@@ -353,7 +304,7 @@
 
         </div>
 
-        <main class="documentFormCard">
+        <main class="contentCard documentFormCard">
 
             <form id="documentForm">
 
@@ -479,7 +430,7 @@
 
                 <div class="formActions">
 
-                    <a class="secondaryButton backToDocumentsButton"
+                    <a class="secondaryButton"
                        href="view-documents.html">
                         Back to Documents
                     </a>

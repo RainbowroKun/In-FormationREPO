@@ -30,7 +30,7 @@ function ShowPageMessage(message, messageType) {
     var pageMessage = $("#pageMessage");
 
     pageMessage
-        .removeClass("errorMessage successMessage")
+        .removeClass("errorMessage successMessage normalmessage")
         .text(message);
 
     if (messageType == "success") {
@@ -38,6 +38,9 @@ function ShowPageMessage(message, messageType) {
     }
     else if (messageType == "error") {
         pageMessage.addClass("errorMessage");
+    }
+    else if (messageType == "normal") {
+        pageMessage.addClass("normalMessage");
     }
 }
 
@@ -167,6 +170,11 @@ function GoBackOrDefault(defaultPage) {
 
     if (source == "recruiters") {
         window.location.href = "view-recruiters.html";
+        return;
+    }
+
+    if (source == "documents") {
+        window.location.href = "view-documents.html";
         return;
     }
 
