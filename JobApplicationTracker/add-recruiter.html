@@ -123,9 +123,6 @@
     </script>
 
     <style>
-
-        /* Main recruiter form card. */
-
         .recruiterFormCard {
             padding: 28px;
             border: 1px solid #e2e8f0;
@@ -134,12 +131,6 @@
             box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
         }
 
-
-        /* Form grid.
-            The shared .formField styles in site.css handle
-            labels, inputs, selects, textareas, and focus states.
-        */
-
         .recruiterFormGrid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -147,16 +138,9 @@
             row-gap: 4px;
         }
 
-        .fullWidthField {
-            grid-column: 1 / -1;
-        }
-
         #notes {
             min-height: 86px;
         }
-
-
-        /* Form footer buttons. */
 
         .formActions {
             display: flex;
@@ -168,20 +152,6 @@
             border-top: 1px solid #e2e8f0;
             background-color: #ffffff;
         }
-
-        .rightFormActions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-            .rightFormActions .secondaryButton,
-            .rightFormActions .primaryButton {
-                min-width: 120px;
-            }
-
-
-        /* Small information note below the form. */
 
         .recruiterFormNotice {
             margin: 20px 0 0;

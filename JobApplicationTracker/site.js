@@ -39,6 +39,9 @@ function ShowPageMessage(message, messageType) {
     else if (messageType == "error") {
         pageMessage.addClass("errorMessage");
     }
+    else if (messageType == "normal") {
+        pageMessage.addClass("normalMessage");
+    }
 }
 
 function GetDateValue(value) {

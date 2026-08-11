@@ -25,7 +25,10 @@
                 SaveFollowUp();
             });
 
-            $("#clearFollowUpForm").on("click", ClearFollowUpForm);
+            $("#clearFollowUpForm").on("click", function () {
+                ClearFollowUpForm();
+                ClearPageMessage();
+            });
 
             UpdateLinkType();
         });
@@ -101,7 +104,7 @@
                     recruiters.forEach(function (recruiter) {
 
                         var recruiterName =
-                            (recruiter.FirstName + " " + recruiter.LastName).trim();
+                            ((recruiter.FirstName || "") + " " + (recruiter.LastName || "")).trim();
 
                         $("#recruiterId").append(
                             $("<option>")
@@ -184,43 +187,43 @@
             };
 
             $("#saveFollowUpButton")
-            .prop("disabled", true)
-            .text("Saving...");
+                .prop("disabled", true)
+                .text("Saving...");
 
-        $.ajax({
-            type: "POST",
-            url: "ProjectServices.asmx/SetFollowUpDate",
-            contentType: "application/json; charset=utf-8",
-            data: JSON.stringify(parameters),
-            dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/SetFollowUpDate",
+                contentType: "application/json; charset=utf-8",
+                data: JSON.stringify(parameters),
+                dataType: "json",
 
-            success: function (response) {
+                success: function (response) {
 
-                var message = response.d || "";
+                    var message = response.d || "";
 
-                if (message.toLowerCase().includes("successfully")) {
-                    ShowPageMessage(message, "success");
-                    ClearFollowUpForm();
+                    if (message.toLowerCase().includes("successfully")) {
+                        ShowPageMessage(message, "success");
+                        ClearFollowUpForm();
+                    }
+                    else {
+                        ShowPageMessage(message, "error");
+                    }
+                },
+
+                error: function () {
+                    ShowPageMessage(
+                        "Unable to connect to the server.",
+                        "error"
+                    );
+                },
+
+                complete: function () {
+                    $("#saveFollowUpButton")
+                        .prop("disabled", false)
+                        .text("Save Follow-Up");
                 }
-                else {
-                    ShowPageMessage(message, "error");
-                }
-            },
-
-            error: function () {
-                ShowPageMessage(
-                    "Unable to connect to the server.",
-                    "error"
-                );
-            },
-
-            complete: function () {
-                $("#saveFollowUpButton")
-                    .prop("disabled", false)
-                    .text("Save Follow-Up");
-            }
-        });
-                }
+            });
+                    }
 
 
         /*
@@ -243,47 +246,12 @@
     </script>
 
     <style>
-        /*
-            Add Follow-Up page heading.
-
-            Page width and breadcrumb styling come from site.css.
-        */
-
-        .pageHeading {
-            margin-bottom: 22px;
-        }
-
-            .pageHeading h2 {
-                margin: 0 0 8px;
-                color: #0f172a;
-                font-size: 36px;
-            }
-
-            .pageHeading p {
-                margin: 0;
-                color: #64748b;
-                font-size: 16px;
-            }
-
-
-        /*
-            Main follow-up form card.
-        */
 
         .followUpCard {
             max-width: 1020px;
             margin: 0 auto;
             padding: 28px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
         }
-
-
-        /*
-            Application or recruiter selector.
-        */
 
         .linkTypeFieldset {
             margin: 0;
@@ -335,11 +303,6 @@
             color: #1556d8;
         }
 
-
-        /*
-            Linked record and follow-up date fields.
-        */
-
         .targetField {
             margin-top: 22px;
         }
@@ -349,11 +312,6 @@
             margin-top: 18px;
         }
 
-
-        /*
-            Form footer buttons.
-        */
-
         .formActions {
             display: flex;
             align-items: center;
@@ -362,10 +320,6 @@
             margin: 24px -28px -28px;
             padding: 18px 28px;
             border-top: 1px solid #e2e8f0;
-        }
-
-        .backToRemindersButton {
-            text-decoration: none;
         }
 
         .rightFormActions {
@@ -451,7 +405,7 @@
 
         </div>
 
-        <main class="followUpCard">
+        <main class="contentCard followUpCard">
 
             <form id="followUpForm">
 
@@ -556,7 +510,7 @@
 
                 <div class="formActions">
 
-                    <a class="secondaryButton backToRemindersButton"
+                    <a class="secondaryButton"
                        href="reminder-interviews.html">
                         Back to Reminders
                     </a>

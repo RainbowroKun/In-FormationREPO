@@ -12,7 +12,7 @@
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-    <script>
+    <script type="text/javascript">
         var applications = [];
         var recruiters = [];
         var currentInterview = null;
@@ -43,7 +43,7 @@
 
             LoadApplicationOptions();
             LoadRecruiters();
-            LoadInterview()
+            LoadInterview();
         });
 
 
@@ -196,6 +196,8 @@
             var applicationId = parseInt($("#applicationId").val(), 10);
             var recruiterSelect = $("#recruiterId");
 
+            $("#interviewerName").val("");
+
             recruiterSelect.empty();
 
             recruiterSelect.append(
@@ -216,7 +218,8 @@
             matchingRecruiters.forEach(function (recruiter) {
 
                 var recruiterName =
-                    (recruiter.FirstName + " " + recruiter.LastName).trim();
+                    ((recruiter.FirstName || "") + " " +
+                        (recruiter.LastName || "")).trim();
 
                 recruiterSelect.append(
                     $("<option>")
@@ -239,6 +242,7 @@
             var recruiterId = parseInt($("#recruiterId").val(), 10);
 
             if (!recruiterId) {
+                $("#interviewerName").val("");
                 return;
             }
 
@@ -251,7 +255,8 @@
             }
 
             $("#interviewerName").val(
-                (recruiter.FirstName + " " + recruiter.LastName).trim()
+                ((recruiter.FirstName || "") + " " +
+                    (recruiter.LastName || "")).trim()
             );
         }
 
@@ -325,51 +330,11 @@
     </script>
 
     <style>
-        /*
-            Add Interview page heading.
-
-            Page width and breadcrumbs come from site.css.
-        */
-
-        .pageHeading {
-            margin-bottom: 22px;
-        }
-
-            .pageHeading h2 {
-                margin: 0 0 8px;
-                color: #0f172a;
-                font-size: 36px;
-            }
-
-            .pageHeading p {
-                margin: 0;
-                color: #64748b;
-                font-size: 16px;
-            }
-
-
-        /*
-            Main interview form card.
-        */
-
         .interviewCard {
             max-width: 1080px;
             margin: 0 auto;
             padding: 28px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.10);
         }
-
-
-        /*
-            Interview form grid.
-
-            Labels, inputs, selects, and textareas use the
-            shared form styles from site.css.
-        */
-
         .interviewFormGrid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -377,22 +342,9 @@
             row-gap: 2px;
         }
 
-            .interviewFormGrid .formField {
-                margin-bottom: 18px;
-            }
-
-        .fullWidthField {
-            grid-column: 1 / -1;
-        }
-
         #interviewNotes {
             min-height: 90px;
         }
-
-
-        /*
-            Form footer buttons.
-        */
 
         .formActions {
             display: flex;
@@ -402,58 +354,6 @@
             margin: 6px -28px -28px;
             padding: 18px 28px;
             border-top: 1px solid #e2e8f0;
-        }
-
-        .backToRemindersButton {
-            text-decoration: none;
-        }
-
-        .rightFormActions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-            .rightFormActions .secondaryButton {
-                min-width: 110px;
-            }
-
-            .rightFormActions .primaryButton {
-                min-width: 150px;
-            }
-
-
-        /*
-            Add Interview responsive layout.
-        */
-
-        @media (max-width: 650px) {
-
-            .interviewFormGrid {
-                grid-template-columns: 1fr;
-            }
-
-            .fullWidthField {
-                grid-column: auto;
-            }
-
-            .formActions {
-                align-items: stretch;
-                flex-direction: column;
-            }
-
-            .backToRemindersButton {
-                width: 100%;
-                text-align: center;
-            }
-
-            .rightFormActions {
-                width: 100%;
-            }
-
-                .rightFormActions button {
-                    flex: 1;
-                }
         }
     </style>
 </head>
@@ -512,20 +412,19 @@
 
         </nav>
 
-        <div class="pageHeading">
+        <div class="pageHeading formPageHeading">
 
             <h2>
                 Edit Interview
             </h2>
 
             <p>
-                Schedule an interview and connect it to one of
-                your saved job applications.
+                Update the details for this scheduled interview.
             </p>
 
         </div>
 
-        <main class="interviewCard">
+        <main class="contentCard interviewCard">
 
             <form id="interviewForm">
 
@@ -701,7 +600,7 @@
 
                 <div class="formActions">
 
-                    <a class="secondaryButton backToRemindersButton"
+                    <a class="secondaryButton"
                        href="reminder-interviews.html">
                         Back to Reminders
                     </a>
@@ -711,7 +610,7 @@
                         <button type="button"
                                 id="clearInterviewForm"
                                 class="secondaryButton">
-                            Clear
+                            Reset
                         </button>
 
                         <button type="submit"
