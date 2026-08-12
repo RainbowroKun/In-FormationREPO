@@ -3,14 +3,13 @@
 <head>
     <meta charset="utf-8" />
 
-    <meta name="description"
-          content="Review pending account requests." />
+    <meta name="description" content="Review pending account requests." />
 
     <title>Account Requests - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="site.js?v=2"></script>
-    <link rel="stylesheet" href="site.css?v=2" />
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
 
     <script type="text/javascript">
 
@@ -36,7 +35,7 @@
 
                     if (userInfo == "Not Logged In") {
 
-                        ShowRequestMessage(
+                        ShowPageMessage(
                             "You must be logged in.",
                             "error"
                         );
@@ -50,7 +49,7 @@
                     if (userParts.length < 2 ||
                         userParts[1].trim().toLowerCase() != "admin") {
 
-                        ShowRequestMessage(
+                        ShowPageMessage(
                             "Only administrators can view account requests.",
                             "error"
                         );
@@ -64,7 +63,7 @@
 
                 error: function () {
 
-                    ShowRequestMessage(
+                    ShowPageMessage(
                         "Unable to verify administrator access.",
                         "error"
                     );
@@ -74,12 +73,13 @@
             });
         }
 
-        function LoadAccountRequests() {
+        function LoadAccountRequests(successMessage) {
 
             $("#requestsTableBody").empty();
             $("#emptyMessage").hide();
+            $("#pendingRequestCount").text("0");
 
-            ShowRequestMessage(
+            ShowPageMessage(
                 "Loading account requests...",
                 "normal"
             );
@@ -95,11 +95,18 @@
 
                 success: function (msg) {
 
-                    ClearRequestMessage();
+                    if (successMessage) {
+                        ShowPageMessage(successMessage, "success");
+                    }
+                    else {
+                        ClearPageMessage();
+                    }
 
                     var requests = msg.d;
 
-                    if (!requests || requests.length == 0) {
+                    $("#pendingRequestCount").text(requests.length);
+
+                    if (requests.length == 0) {
 
                         $("#emptyMessage").show();
                         return;
@@ -112,7 +119,7 @@
 
                     console.log(xhr.responseText);
 
-                    ShowRequestMessage(
+                    ShowPageMessage(
                         "Unable to load account requests.",
                         "error"
                     );
@@ -138,26 +145,19 @@
                 var row =
                     $("<tr></tr>");
 
-                row.append(
-                    $("<td></td>").text(
-                        request.request_id ||
-                        request.RequestId
-                    )
-                );
+                var firstName =
+                    request.first_name ||
+                    request.FirstName ||
+                    "";
+
+                var lastName =
+                    request.last_name ||
+                    request.LastName ||
+                    "";
 
                 row.append(
                     $("<td></td>").text(
-                        request.first_name ||
-                        request.FirstName ||
-                        ""
-                    )
-                );
-
-                row.append(
-                    $("<td></td>").text(
-                        request.last_name ||
-                        request.LastName ||
-                        ""
+                        (firstName + " " + lastName).trim()
                     )
                 );
 
@@ -178,43 +178,39 @@
                 );
 
                 row.append(
-                    $("<td></td>").text(
-                        request.status ||
-                        request.Status ||
-                        ""
-                    )
-                );
-
-                row.append(
                     $("<td></td>").text(requestedDate)
                 );
 
                 var requestId =
-                request.request_id ||
-                request.RequestId;
+                    request.request_id ||
+                    request.RequestId;
+
                 var actionsCell =
-                $("<td></td>");
+                    $("<td></td>");
+
+                var actions =
+                    $("<div></div>").addClass("requestActions");
 
                 var approveButton =
-              $("<button type='button'>Approve</button>");
-
-                approveButton.addClass("approveButton");
+                    $("<button type='button'>Approve</button>")
+                        .addClass("approveButton");
 
                 approveButton.click(function () {
-                ApproveRequest(requestId);
-             });
+                    ApproveRequest(requestId);
+                });
 
                 var denyButton =
-                $("<button type='button'>Deny</button>");
-
-             denyButton.addClass("denyButton");
+                    $("<button type='button'>Deny</button>")
+                        .addClass("denyButton");
 
                 denyButton.click(function () {
-             DenyRequest(requestId);
-             });
+                    DenyRequest(requestId);
+                });
 
-                actionsCell.append(approveButton);
-                actionsCell.append(denyButton);
+                actions.append(approveButton);
+                actions.append(denyButton);
+
+                actionsCell.append(actions);
 
                 row.append(actionsCell);
                 tableBody.append(row);
@@ -222,63 +218,68 @@
         }
         function ApproveRequest(requestId) {
 
-    if (!confirm("Approve this account request?")) {
-        return;
-    }
+            if (!confirm("Approve this account request?")) {
+                return;
+            }
 
-    UpdateAccountRequest(
-        "ProjectServices.asmx/ApproveAccountRequest",
-        requestId
-    );
-}
-
-function DenyRequest(requestId) {
-
-    if (!confirm("Deny this account request?")) {
-        return;
-    }
-
-    UpdateAccountRequest(
-        "ProjectServices.asmx/RejectAccountRequest",
-        requestId
-    );
-}
-
-function UpdateAccountRequest(webMethod, requestId) {
-
-    var parameters = JSON.stringify({
-        requestId: requestId
-    });
-
-    $.ajax({
-        type: "POST",
-        url: webMethod,
-        data: parameters,
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
-
-        success: function (msg) {
-
-            ShowRequestMessage(
-                msg.d,
-                "success"
-            );
-
-            LoadAccountRequests();
-        },
-
-        error: function (xhr) {
-
-            console.log(xhr.responseText);
-
-            ShowRequestMessage(
-                "Unable to update the account request.",
-                "error"
+            UpdateAccountRequest(
+                "ProjectServices.asmx/ApproveAccountRequest",
+                requestId
             );
         }
-    });
-}
+
+        function DenyRequest(requestId) {
+
+            if (!confirm("Deny this account request?")) {
+                return;
+            }
+
+            UpdateAccountRequest(
+                "ProjectServices.asmx/RejectAccountRequest",
+                requestId
+            );
+        }
+
+        function UpdateAccountRequest(webMethod, requestId) {
+
+            var parameters = JSON.stringify({
+                requestId: requestId
+            });
+
+            $.ajax({
+                type: "POST",
+                url: webMethod,
+                data: parameters,
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+
+                    if (msg.d == "Account request approved." ||
+                        msg.d == "Account request rejected.") {
+
+                        LoadAccountRequests(msg.d);
+                    }
+                    else {
+                        ShowPageMessage(
+                            msg.d,
+                            "error"
+                        );
+                    }
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr.responseText);
+
+                    ShowPageMessage(
+                        "Unable to update the account request.",
+                        "error"
+                    );
+                }
+            });
+        }
         function FormatRequestedDate(dateValue) {
 
             if (!dateValue) {
@@ -295,109 +296,12 @@ function UpdateAccountRequest(webMethod, requestId) {
             return parsedDate.toLocaleString();
         }
 
-        function ShowRequestMessage(message, type) {
-
-            var pageMessage =
-                $("#pageMessage");
-
-            pageMessage
-                .removeClass(
-                    "successMessage errorMessage normalMessage"
-                )
-                .text(message);
-
-            if (type == "error") {
-                pageMessage.addClass("errorMessage");
-            }
-            else if (type == "success") {
-                pageMessage.addClass("successMessage");
-            }
-            else {
-                pageMessage.addClass("normalMessage");
-            }
-        }
-
-        function ClearRequestMessage() {
-
-            $("#pageMessage")
-                .removeClass(
-                    "successMessage errorMessage normalMessage"
-                )
-                .text("");
-        }
-
     </script>
 
     <style>
 
         .requestsCard {
             padding: 32px 38px;
-            background-color: white;
-            border-radius: 9px;
-            box-shadow:
-                0 3px 12px rgba(0, 0, 0, 0.13);
-        }
-
-        .pageHeading {
-            margin-bottom: 26px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #d8dee8;
-        }
-
-        .pageHeading h2 {
-            margin: 0 0 8px 0;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .pageHeading p {
-            margin: 0;
-            color: #64748b;
-        }
-
-        .tableWrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 14px 16px;
-            border-bottom: 1px solid #d8dee8;
-            text-align: left;
-        }
-
-        th {
-            background-color: #eef2f7;
-            color: #1f3c88;
-            font-weight: bold;
-        }
-
-        tbody tr:hover {
-            background-color: #f8fafc;
-        }
-
-        #pageMessage,
-        #emptyMessage {
-            margin: 18px 0;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .errorMessage {
-            color: #dc2626;
-        }
-
-        .successMessage {
-            color: #15803d;
-        }
-
-        .normalMessage {
-            color: #475569;
         }
 
         #emptyMessage {
@@ -407,28 +311,74 @@ function UpdateAccountRequest(webMethod, requestId) {
             background-color: #f8fafc;
             border-radius: 7px;
         }
-         .toggleButtons {
-         display: flex;
-         gap: 10px;
-         margin-bottom: 22px;
+
+        .summaryCards {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 24px;
         }
 
-     .toggleButton {
-        padding: 10px 18px;
-        border: 1px solid #1f3c88;
-        border-radius: 6px;
-        background-color: white;
-        color: #1f3c88;
-        font-weight: bold;
-        cursor: pointer;
+        .summaryCard {
+            min-width: 210px;
+            padding: 18px 22px;
+            background-color: white;
+            border: 1px solid #d8dee8;
+            border-radius: 9px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
-        .toggleButton:hover {
-            background-color: #eef2f7;
+        .summaryLabel {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: bold;
         }
 
-        .activeToggle {
-            background-color: #1f3c88;
+        .summaryNumber {
+            display: block;
+            color: #d97706;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .requestActions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .approveButton,
+        .denyButton {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease,
+                        border-color 0.2s ease,
+                        color 0.2s ease;
+        }
+
+        .approveButton {
+            border: 1px solid #15803d;
+            background-color: #15803d;
+            color: white;
+        }
+
+        .approveButton:hover {
+            background-color: #166534;
+            border-color: #166534;
+        }
+
+        .denyButton {
+            border: 1px solid #dc2626;
+            background-color: white;
+            color: #dc2626;
+        }
+
+        .denyButton:hover {
+            background-color: #dc2626;
             color: white;
         }
  </style>
@@ -482,28 +432,45 @@ function UpdateAccountRequest(webMethod, requestId) {
 
         </nav>
 
-        <main class="requestsCard">
+        <main class="contentCard requestsCard">
 
-            <div class="pageHeading">
-                <div class="toggleButtons">
+            <div class="pageHeading adminPageHeading">
 
-            <button type="button"
-            class="toggleButton activeToggle">
-             Account Requests
-             </button>
-
-         <button type="button"
-            class="toggleButton"
-            onclick="window.location.href='manage-users.html';">
-            User Accounts
-         </button>
-
-         </div>
-                <h2>Pending Account Requests</h2>
+                <h2>Account Requests</h2>
 
                 <p>
-                    View users who are waiting for account approval.
+                    Review and manage pending requests for new user accounts.
                 </p>
+
+            </div>
+
+            <div class="toggleButtons">
+
+                <button type="button"
+                        class="toggleButton activeToggle">
+                    Account Requests
+                </button>
+
+                <button type="button"
+                        class="toggleButton"
+                        onclick="window.location.href='manage-users.html';">
+                    User Accounts
+                </button>
+
+            </div>
+
+            <div class="summaryCards">
+
+                <div class="summaryCard pendingSummary">
+                    <span class="summaryLabel">
+                        Pending Requests
+                    </span>
+
+                    <span id="pendingRequestCount"
+                        class="summaryNumber">
+                        0
+                    </span>
+                </div>
 
             </div>
 
@@ -513,17 +480,14 @@ function UpdateAccountRequest(webMethod, requestId) {
 
                 <div class="tableWrapper">
 
-                    <table>
+                    <table class="dataTable">
 
                         <thead>
 
                             <tr>
-                                <th>Request ID</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
+                                <th>Name</th>
                                 <th>Email</th>
                                 <th>Username</th>
-                                <th>Status</th>
                                 <th>Requested</th>
                                 <th>Actions</th>
                             </tr>
