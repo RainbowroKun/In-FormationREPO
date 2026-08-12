@@ -2,9 +2,491 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title></title>
+    <meta name="description" content="View a document and the applications linked to it." />
+    <title>Document Details - In Formation Jobs</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
+
+    <script type="text/javascript">
+        var documentId = 0;
+        var allApplications = [];
+        var linkedApplicationIds = [];
+
+        $(document).ready(function () {
+            LoadAccountInformation();
+            UpdatePageNavigation();
+
+            documentId = GetDocumentIdFromUrl();
+
+            if (documentId <= 0) {
+                ShowPageMessage("A valid document was not selected.", "error");
+                return;
+            }
+
+            $("#downloadDocumentButton")
+                .attr("href", "DownloadDocument.ashx?documentId=" + documentId);
+
+            $("#linkApplicationButton").on("click", LinkApplication);
+
+            LoadDocumentDetails();
+            LoadApplicationOptions();
+        });
+
+        function GetDocumentIdFromUrl() {
+            var parameters = new URLSearchParams(window.location.search);
+            var parsedValue = parseInt(parameters.get("documentId"), 10);
+            return isNaN(parsedValue) ? 0 : parsedValue;
+        }
+
+        function LoadDocumentDetails() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetDocumentDetails",
+                data: JSON.stringify({ documentId: documentId }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (!msg.d) {
+                        ShowPageMessage("The selected document could not be found.", "error");
+                        return;
+                    }
+
+                    DisplayDocument(msg.d);
+
+                    var linkedApplications = msg.d.Applications || [];
+
+                    linkedApplicationIds = linkedApplications.map(function (application) {
+                        return application.ApplicationId;
+                    });
+
+                    DisplayApplications(linkedApplications);
+                    UpdateApplicationOptions();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load document details.", "error");
+                }
+            });
+        }
+
+        function LoadApplicationOptions() {
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetApplications",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    allApplications = msg.d || [];
+                    UpdateApplicationOptions();
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load applications.", "error");
+                }
+            });
+        }
+
+
+        function UpdateApplicationOptions() {
+            var applicationSelect = $("#linkApplicationId");
+            applicationSelect.empty();
+
+            applicationSelect.append(
+                "<option value=''>Select an application...</option>"
+            );
+
+            allApplications.forEach(function (application) {
+                if (!linkedApplicationIds.includes(application.ApplicationId)) {
+                    applicationSelect.append(
+                        $("<option>")
+                            .val(application.ApplicationId)
+                            .text(application.CompanyName + " — " + application.JobTitle)
+                    );
+                }
+            });
+
+            $("#linkApplicationButton").prop(
+                "disabled",
+                applicationSelect.find("option").length <= 1
+            );
+        }
+
+
+        function LinkApplication() {
+            var applicationId = parseInt($("#linkApplicationId").val(), 10);
+
+            if (!applicationId) {
+                ShowPageMessage("Please select an application to link.", "error");
+                return;
+            }
+
+            ClearPageMessage();
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId,
+                documentId: documentId,
+                applicationNotes: $("#linkApplicationNotes").val().trim()
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/LinkApplicationDocument",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application linked successfully.", "success");
+                        $("#linkApplicationId").val("");
+                        $("#linkApplicationNotes").val("");
+                        LoadDocumentDetails();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to link the application.", "error");
+                }
+            });
+        }
+
+        function UnlinkApplication(applicationId) {
+            var confirmed = confirm(
+                "Are you sure you want to unlink this application from the document?"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            var parameters = JSON.stringify({
+                applicationId: applicationId,
+                documentId: documentId
+            });
+
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/UnlinkApplicationDocument",
+                data: parameters,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+
+                success: function (msg) {
+                    if (msg.d == "Success") {
+                        ShowPageMessage("Application unlinked successfully.", "success");
+                        LoadDocumentDetails();
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to unlink the application.", "error");
+                }
+            });
+        }
+
+        function DisplayDocument(documentItem) {
+            $("#documentFileName").text(documentItem.FileName || "—");
+            $("#documentType").text(documentItem.DocumentType || "—");
+            $("#contentType").text(documentItem.ContentType || "—");
+            $("#fileSize").text(FormatFileSize(documentItem.FileSize));
+            $("#uploadedAt").text(FormatDate(documentItem.UploadedAt));
+            $("#documentNotes").text(documentItem.Notes || "No notes were added.");
+            $("#pageTitle").text(documentItem.FileName || "Document Details");
+        }
+
+        function DisplayApplications(applications) {
+            $("#applicationCount").text(applications.length);
+
+            var tableBody = $("#applicationsTableBody");
+            tableBody.empty();
+
+            if (applications.length == 0) {
+                tableBody.append(
+                    "<tr><td colspan='7' class='emptyTableMessage'>" +
+                    "This document is not linked to an application." +
+                    "</td></tr>"
+                );
+                return;
+            }
+
+            applications.forEach(function (application) {
+                var status = application.IsArchived
+                    ? "Archived"
+                    : (application.ApplicationStatus || "Applied");
+
+                var row =
+                    "<tr>" +
+                    "<td><strong>" + EscapeHtml(application.CompanyName) + "</strong></td>" +
+                    "<td>" + EscapeHtml(application.JobTitle) + "</td>" +
+                    "<td>" + FormatDate(application.DateApplied) + "</td>" +
+                    "<td><span class='statusBadge'>" + EscapeHtml(status) + "</span></td>" +
+                    "<td>" + EscapeHtml(application.ApplicationNotes || "—") + "</td>" +
+                    "<td>" + FormatDate(application.LinkedAt) + "</td>" +
+                    "<td>" +
+                        "<div class='rowActions'>" +
+                            "<a class='tableLink' href='application-details.html?applicationId=" +
+                                application.ApplicationId +
+                                "&source=documents'>View</a>" +
+                            "<button type='button' class='unlinkButton' onclick='UnlinkApplication(" +
+                                application.ApplicationId +
+                                ");'>Unlink</button>" +
+                        "</div>" +
+                    "</td>" +
+                    "</tr>";
+
+                tableBody.append(row);
+            });
+        }
+    </script>
+
+    <style>
+        .detailsCard {
+            margin-bottom: 20px;
+        }
+
+            .detailsCard h3 {
+                margin: 0 0 18px;
+                color: #0f172a;
+            }
+
+        .documentSummaryGrid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 24px 40px;
+        }
+
+        .summaryField {
+            min-width: 0;
+        }
+
+        .summaryField label {
+            display: block;
+            margin-bottom: 7px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .summaryField p {
+            margin: 0;
+            color: #1e293b;
+            overflow-wrap: anywhere;
+        }
+
+        .notesField {
+            grid-column: span 3;
+        }
+
+        .applicationCount {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 12px;
+        }
+
+        .applicationsTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .statusBadge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 5px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .linkApplicationArea {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 18px;
+            align-items: end;
+            margin-bottom: 20px;
+            padding: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            background-color: #f8fafc;
+        }
+
+        .linkApplicationArea .primaryButton {
+            min-height: 42px;
+            white-space: nowrap;
+        }
+
+        .linkApplicationArea .formField {
+            margin-bottom: 0;
+        }
+
+        .unlinkButton {
+            padding: 0;
+            border: none;
+            background: none;
+            color: #dc2626;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .unlinkButton:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <div>
+            <h1>In Formation Jobs</h1>
+            <p>Keep your job search organized and moving forward.</p>
+        </div>
 
+        <div class="accountArea">
+            <p id="welcomeMessage">Loading account...</p>
+            <div id="signedInArea">
+                <a class="accountLink" href="#" onclick="LogOut(); return false;">Log Out</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="pageWrapper">
+        <nav class="pageNav">
+            <a href="home-page.html">Home</a>
+            <span>&gt;</span>
+            <a id="sourceBreadcrumb" href="view-documents.html">View Documents</a>
+            <span>&gt;</span>
+            <span>Document Details</span>
+        </nav>
+
+        <div class="pageHeadingRow">
+            <div class="pageHeading">
+                <h2 id="pageTitle">Document Details</h2>
+                <p>See the file information and every application linked to it.</p>
+            </div>
+
+            <div class="rowActions">
+                <button type="button"
+                        class="secondaryButton"
+                        onclick="GoBackOrDefault('view-documents.html');">
+                    Back
+                </button>
+                <a class="primaryButton" id="downloadDocumentButton" href="#">Download</a>
+            </div>
+        </div>
+
+
+
+        <section class="contentCard detailsCard">
+            <h3>Document Information</h3>
+
+            <div class="documentSummaryGrid">
+                <div class="summaryField">
+                    <label>File Name</label>
+                    <p id="documentFileName">Loading...</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>Document Type</label>
+                    <p id="documentType">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>File Type</label>
+                    <p id="contentType">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>File Size</label>
+                    <p id="fileSize">—</p>
+                </div>
+
+                <div class="summaryField">
+                    <label>Uploaded</label>
+                    <p id="uploadedAt">—</p>
+                </div>
+
+                <div class="summaryField notesField">
+                    <label>Notes</label>
+                    <p id="documentNotes">—</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="contentCard detailsCard">
+            <h3>
+                Linked Applications
+                <span class="applicationCount" id="applicationCount">0</span>
+            </h3>
+
+            <div class="linkApplicationArea">
+
+                <div class="formField">
+                    <label for="linkApplicationId">Application</label>
+
+                    <select id="linkApplicationId">
+                        <option value="">Loading applications...</option>
+                    </select>
+                </div>
+
+                <div class="formField">
+                    <label for="linkApplicationNotes">Link Notes</label>
+
+                    <input type="text"
+                           id="linkApplicationNotes"
+                           maxlength="500"
+                           placeholder="Optional notes about this document..." />
+                </div>
+
+                <button type="button"
+                        id="linkApplicationButton"
+                        class="primaryButton">
+                    Link Application
+                </button>
+
+            </div>
+
+            <div class="tableWrapper">
+                <table class="dataTable applicationsTable">
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Job Title</th>
+                            <th>Date Applied</th>
+                            <th>Status</th>
+                            <th>Link Notes</th>
+                            <th>Linked</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="applicationsTableBody">
+                        <tr>
+                            <td colspan="7" class="emptyTableMessage">Loading applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <p id="pageMessage"></p>
+    </div>
 </body>
 </html>

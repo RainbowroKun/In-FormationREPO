@@ -6,15 +6,13 @@
     <meta name="description"
           content="Search applications, recruiters, and documents in your job application tracker." />
 
-    <title>
-        Search and Filter - In Formation Jobs
-    </title>
+    <title> Search and Filter - In Formation Jobs </title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="site.js"></script>
     <link rel="stylesheet" href="site.css" />
 
-    <script>
+    <script type="text/javascript">
         var allSearchRecords = [];
         var filteredSearchRecords = [];
 
@@ -22,6 +20,8 @@
         $(document).ready(function () {
 
             LoadAccountInformation();
+
+            LoadSearchRecords();
 
             $("#searchText").on("input", FilterSearchRecords);
 
@@ -37,15 +37,38 @@
 
             $("#clearSearchFilters").on("click", ClearSearchFilters);
 
-            FilterSearchRecords();
         });
 
 
         /*
-            Filters the temporary search records using text,
-            record type, and the selected date range.
+            Loads and filters search records.
         */
+        function LoadSearchRecords() {
 
+            $.ajax({
+
+                type: "POST",
+                url: "ProjectServices.asmx/GetSearchRecords",
+                contentType: "application/json; charset=utf-8",
+                data: "{}",
+                dataType: "json",
+
+                success: function (response) {
+
+                    allSearchRecords = response.d || [];
+
+                    FilterSearchRecords();
+                },
+
+                error: function () {
+
+                    ShowPageMessage(
+                        "Unable to load search records.",
+                        "error"
+                    );
+                }
+            });
+        }
         function FilterSearchRecords() {
 
             var searchText = $("#searchText").val().trim().toLowerCase();
@@ -57,34 +80,32 @@
             var dateTo = $("#dateTo").val();
 
             filteredSearchRecords = allSearchRecords.filter(function (record) {
-                        var searchableText =
-                            (
-                                (record.RecordType || "") +
-                                " " +
-                                (record.Title || "") +
-                                " " +
-                                (record.CompanyName || "") +
-                                " " +
-                                (record.RelatedApplicationName || "") +
-                                " " +
-                                (record.Notes || "") +
-                                " " +
-                                (record.Status || "") +
-                                " " +
-                                (record.SearchDate || "") +
-                                " " +
-                                (record.LastUpdated || "")
-                            ).toLowerCase();
 
-                        var matchesText = searchableText.includes(searchText);
+                var searchableText =
+                    (
+                        (record.RecordType || "") +
+                        " " +
+                        (record.Title || "") +
+                        " " +
+                        (record.CompanyName || "") +
+                        " " +
+                        (record.RelatedApplicationName || "") +
+                        " " +
+                        (record.Notes || "") +
+                        " " +
+                        (record.Status || "") +
+                        " " +
+                        (record.SearchDate || "") +
+                        " " +
+                        (record.LastUpdated || "")
+                    ).toLowerCase();
 
-                        var matchesType = selectedType == "All" || record.RecordType == selectedType;
+                var matchesText = searchableText.includes(searchText);
+                var matchesType = selectedType == "All" || record.RecordType == selectedType;
+                var matchesDate = DoesRecordMatchDateRange(record, dateFrom, dateTo);
 
-                        var matchesDate = DoesRecordMatchDateRange(record, dateFrom, dateTo);
-
-                        return (matchesText && matchesType && matchesDate);
-                    }
-                );
+                return (matchesText && matchesType && matchesDate);
+            });
 
             SortSearchRecords();
             DisplaySearchRecords();
@@ -102,7 +123,7 @@
                 return true;
             }
 
-            var recordDate = GetSearchDateValue(record.SearchDate || record.LastUpdated);
+            var recordDate = GetDateValue(record.SearchDate || record.LastUpdated);
 
             if (recordDate == 0) {
                 return false;
@@ -110,7 +131,7 @@
 
             if (dateFrom) {
 
-                var minimumDate = GetSearchDateValue(dateFrom);
+                var minimumDate = GetDateValue(dateFrom);
 
                 if (recordDate < minimumDate) {
                     return false;
@@ -119,7 +140,7 @@
 
             if (dateTo) {
 
-                var maximumDate = GetSearchDateValue(dateTo);
+                var maximumDate = GetDateValue(dateTo);
 
                 if (recordDate > maximumDate) {
                     return false;
@@ -140,47 +161,27 @@
 
             filteredSearchRecords.sort(function (firstRecord, secondRecord) {
 
-                    if (selectedSort == "oldest") {
-                        return (
-                            GetSearchDateValue(firstRecord.LastUpdated) -
-                            GetSearchDateValue(secondRecord.LastUpdated)
-                        );
-                    }
-
-                    if (selectedSort == "titleAscending") {
-                        return (firstRecord.Title || "").localeCompare(secondRecord.Title || "");
-                    }
-
-                    if (selectedSort == "titleDescending") {
-                        return (secondRecord.Title || "").localeCompare(firstRecord.Title || "");
-                    }
-
-                    return (GetSearchDateValue(secondRecord.LastUpdated) - GetSearchDateValue(firstRecord.LastUpdated)
+                if (selectedSort == "oldest") {
+                    return (
+                        GetDateValue(firstRecord.LastUpdated) -
+                        GetDateValue(secondRecord.LastUpdated)
                     );
                 }
-            );
+
+                if (selectedSort == "titleAscending") {
+                    return (firstRecord.Title || "").localeCompare(secondRecord.Title || "");
+                }
+
+                if (selectedSort == "titleDescending") {
+                    return (secondRecord.Title || "").localeCompare(firstRecord.Title || "");
+                }
+
+                return (
+                    GetDateValue(secondRecord.LastUpdated) -
+                    GetDateValue(firstRecord.LastUpdated)
+                );
+            });
         }
-
-
-        /*
-            Converts a date value into a sortable number.
-        */
-
-        function GetSearchDateValue(value) {
-
-            if (!value) {
-                return 0;
-            }
-
-            var date = new Date(value + "T00:00:00");
-
-            if (isNaN(date.getTime())) {
-                return 0;
-            }
-
-            return date.getTime();
-        }
-
 
         /*
             Builds the search result table.
@@ -195,13 +196,9 @@
             $("#searchResultCount").text(
                 "Showing " +
                 filteredSearchRecords.length +
-                " result" +
-                (
-                    filteredSearchRecords.length ==
-                    1
-                        ? ""
-                        : "s"
-                )
+                (filteredSearchRecords.length == 1
+                    ? " result."
+                    : " results.")
             );
 
             if (filteredSearchRecords.length == 0) {
@@ -232,7 +229,7 @@
                             "</td>" +
 
                             "<td>" +
-                                EscapeHtml(record.CompanyName ||"—") +
+                                EscapeHtml(record.CompanyName || "—") +
                             "</td>" +
 
                             "<td>" +
@@ -274,9 +271,7 @@
             if (recordType == "Recruiter") {
                 typeClass = "typeRecruiter";
             }
-            else if (
-                recordType == "Document"
-            ) {
+            else if (recordType == "Document") {
                 typeClass = "typeDocument";
             }
 
@@ -299,7 +294,7 @@
             var destination = GetRecordDestination(record);
 
             return (
-                "<a class='resultLink' href='" +
+                "<a class='tableLink resultLink' href='" +
                     destination +
                     "'>" +
                     EscapeHtml(record.Title) +
@@ -319,7 +314,7 @@
             }
 
             return (
-                "<a class='resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "'>" +
+                "<a class='tableLink resultLink' href='application-details.html?applicationId=" + record.RelatedApplicationId + "&source=search'>" +
                     EscapeHtml(record.RelatedApplicationName) +
                 "</a>"
             );
@@ -338,7 +333,10 @@
 
             var statusClass = "searchStatusApplied";
 
-            if (record.Status == "Interview") {
+            if (record.Status == "Archived") {
+                statusClass = "searchStatusArchived";
+            }
+            else if (record.Status == "Interview") {
                 statusClass = "searchStatusInterview";
             }
             else if (record.Status == "Offer") {
@@ -363,7 +361,7 @@
         function BuildSearchActions(record) {
 
             return (
-                "<a class='resultActionLink' href='" + GetRecordDestination(record) + "'>" +
+                "<a class='tableLink resultActionLink' href='" + GetRecordDestination(record) + "'>" +
                     "Open" +
                 "</a>"
             );
@@ -377,17 +375,21 @@
 
         function GetRecordDestination(record) {
 
-            if (record.RecordType == "Application"
-            ) {
-                return ("application-details.html?applicationId=" + record.RecordId);
+            if (record.RecordType == "Application") {
+                return "application-details.html?applicationId=" +
+                    record.RecordId +
+                    "&source=search";
             }
 
-            if (record.RecordType == "Recruiter"
-            ) {
-                return ("edit-recruiter.html?recruiterId=" + record.RecordId);
+            if (record.RecordType == "Recruiter") {
+                return "application-details.html?applicationId=" +
+                    record.RelatedApplicationId +
+                    "&source=search";
             }
 
-            return ("document-details.html?documentId=" + record.RecordId);
+            return "documents-details.html?documentId=" +
+                record.RecordId +
+                "&source=search";
         }
 
 
@@ -409,48 +411,13 @@
     </script>
 
     <style>
-
-        /*
-            Search page heading.
-
-            Shared page width and breadcrumbs come
-            from site.css.
-        */
-
         .pageHeading {
             margin-bottom: 22px;
         }
 
-            .pageHeading h2 {
-                margin: 0 0 8px;
-                color: #0f172a;
-                font-size: 36px;
-            }
-
-            .pageHeading p {
-                margin: 0;
-                color: #64748b;
-                font-size: 16px;
-            }
-
-
-        /*
-            Shared card appearance for the search page.
-        */
-
         .searchCard {
             margin-bottom: 20px;
-            padding: 22px;
-            border: 1px solid #e2e8f0;
-            border-radius: 9px;
-            background-color: white;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.09);
         }
-
-
-        /*
-            Main search field.
-        */
 
         .mainSearchField {
             margin-bottom: 18px;
@@ -460,11 +427,6 @@
                 min-height: 46px;
                 font-size: 15px;
             }
-
-
-        /*
-            Secondary search controls.
-        */
 
         .searchControlGrid {
             display: grid;
@@ -504,11 +466,6 @@
             min-width: 145px;
         }
 
-
-        /*
-            Search result heading.
-        */
-
         .searchResultsHeading {
             display: flex;
             align-items: center;
@@ -528,45 +485,9 @@
             font-size: 14px;
         }
 
-
-        /*
-            Search result table.
-        */
-
-        .tableWrapper {
-            width: 100%;
-            overflow-x: auto;
-        }
-
         .searchResultsTable {
-            width: 100%;
             min-width: 1180px;
-            border-collapse: collapse;
         }
-
-            .searchResultsTable th,
-            .searchResultsTable td {
-                padding: 13px 10px;
-                border-bottom: 1px solid #e2e8f0;
-                text-align: left;
-                vertical-align: middle;
-            }
-
-            .searchResultsTable th {
-                background-color: #f8fafc;
-                color: #475569;
-                font-size: 12px;
-                white-space: nowrap;
-            }
-
-            .searchResultsTable td {
-                color: #334155;
-                font-size: 13px;
-            }
-
-            .searchResultsTable tbody tr:hover {
-                background-color: #f8fafc;
-            }
 
         .notesCell {
             max-width: 300px;
@@ -575,33 +496,10 @@
             white-space: nowrap;
         }
 
-        .emptyTableMessage {
-            padding: 34px;
-            color: #64748b;
-            text-align: center;
-        }
-
-
-        /*
-            Search result links.
-        */
-
         .resultLink,
         .resultActionLink {
-            color: #1556d8;
             font-weight: bold;
-            text-decoration: none;
         }
-
-            .resultLink:hover,
-            .resultActionLink:hover {
-                text-decoration: underline;
-            }
-
-
-        /*
-            Record type badges.
-        */
 
         .recordTypeBadge {
             display: inline-block;
@@ -627,11 +525,6 @@
             background-color: #ede9fe;
             color: #7c3aed;
         }
-
-
-        /*
-            Application status badges.
-        */
 
         .searchStatusBadge {
             display: inline-block;
@@ -661,6 +554,11 @@
         .searchStatusRejected {
             background-color: #fee2e2;
             color: #dc2626;
+        }
+
+        .searchStatusArchived {
+            background-color: #e2e8f0;
+            color: #475569;
         }
     </style>
 </head>
@@ -730,7 +628,7 @@
 
         </div>
 
-        <section class="searchCard">
+        <section class="contextCard searchCard">
 
             <div class="formField mainSearchField">
 
@@ -862,7 +760,7 @@
 
             <div class="tableWrapper">
 
-                <table class="searchResultsTable">
+                <table class="dataTable searchResultsTable">
 
                     <thead>
 

@@ -9,183 +9,222 @@
     <title>User Accounts - In Formation Jobs</title>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="site.js?v=2"></script>
-    <link rel="stylesheet" href="site.css?v=2" />
+    <script src="site.js"></script>
+    <link rel="stylesheet" href="site.css" />
 
     <script type="text/javascript">
 
-       $(document).ready(function () {
+        $(document).ready(function () {
 
-        LoadAccountInformation();
-     CheckAdminAccess();
-     LoadUsers();
+            LoadAccountInformation();
+            CheckAdminAccess();
         });
 
-        function LoadUsers() {
+        function LoadUsers(successMessage) {
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/GetUsers",
-        data: "{}",
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/GetUsers",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
+                success: function (msg) {
 
-            var users = msg.d || [];
-            var tableBody = $("#usersTableBody");
+                    var users = msg.d || [];
+                    var tableBody = $("#usersTableBody");
 
-            tableBody.empty();
-            $("#emptyUsersMessage").hide();
+                    tableBody.empty();
+                    $("#emptyUsersMessage").hide();
 
-            if (users.length == 0) {
-                $("#emptyUsersMessage").show();
-                return;
-            }
+                    UpdateUserSummary(users);
+
+                    if (successMessage) {
+                        ShowPageMessage(successMessage, "success");
+                    }
+
+                    if (users.length == 0) {
+                        $("#emptyUsersMessage").show();
+                        return;
+                    }
+
+                    users.forEach(function (user) {
+
+                        var row = $("<tr></tr>");
+
+                        row.append(
+                            $("<td></td>")
+                                .addClass("userName")
+                                .text(
+                                    ((user.FirstName || "") + " " +
+                                    (user.LastName || "")).trim()
+                                )
+                        );
+
+                        row.append(
+                            $("<td></td>").text(user.Email || "")
+                        );
+
+                        row.append(
+                            $("<td></td>").text(user.Username || "")
+                        );
+
+                        var role =
+                            (user.Role || "").toLowerCase();
+
+                        var roleBadge =
+                            $("<span></span>")
+                                .addClass("roleBadge")
+                                .text(
+                                    role == "admin"
+                                        ? "Administrator"
+                                        : "User"
+                                );
+
+                        if (role == "admin") {
+                            roleBadge.addClass("adminBadge");
+                        }
+                        else {
+                            roleBadge.addClass("userBadge");
+                        }
+
+                        row.append(
+                            $("<td></td>").append(roleBadge)
+                        );
+
+                        var actionCell = $("<td></td>");
+
+                        var actions = $("<div></div>").addClass("userActions");
+
+                        if (role == "user") {
+
+                            var promoteButton =
+                                $("<button type='button'>Promote</button>")
+                                    .addClass("promoteButton");
+
+                            promoteButton.click(function () {
+                                PromoteUser(user.UserId);
+                            });
+
+                            actions.append(promoteButton);
+                        }
+
+                        var deleteButton =
+                            $("<button type='button'>Delete</button>")
+                                .addClass("deleteUserButton");
+
+                        deleteButton.click(function () {
+                            DeleteUser(user.UserId);
+                        });
+
+                        actions.append(deleteButton);
+
+                        actionCell.append(actions);
+
+                        row.append(actionCell);
+                        tableBody.append(row);
+                        });
+                },
+
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    ShowPageMessage("Unable to load user accounts.", "error");
+                }
+            });
+        }
+
+        function UpdateUserSummary(users) {
+
+            var administratorCount = 0;
+            var standardUserCount = 0;
 
             users.forEach(function (user) {
 
-                var row = $("<tr></tr>");
-
-                row.append(
-                    $("<td></td>").text(
-                        (user.FirstName || "") + " " +
-                        (user.LastName || "")
-                    )
-                );
-
-                row.append(
-                    $("<td></td>").text(user.Email || "")
-                );
-
-                row.append(
-                    $("<td></td>").text(user.Username || "")
-                );
-
-                row.append(
-                    $("<td></td>").text(user.Role || "")
-                );
-
-                var actionCell = $("<td></td>");
-
-                if ((user.Role || "").toLowerCase() == "user") {
-
-                    var promoteButton =
-                        $("<button type='button'>Promote</button>");
-
-                    promoteButton.click(function () {
-                        PromoteUser(user.UserId);
-                    });
-
-                    actionCell.append(promoteButton);
+                if ((user.Role || "").toLowerCase() == "admin") {
+                    administratorCount++;
                 }
-                     if ((user.Role || "").toLowerCase() == "user") {
-
-                 var promoteButton =
-                    $("<button type='button'>Promote</button>");
-
-                 promoteButton.click(function () {
-                    PromoteUser(user.UserId);
-                 });
-
-                 actionCell.append(promoteButton);
-                    }
-
-                    var deleteButton =
-                    $("<button type='button'>Delete</button>");
-
-                    deleteButton.click(function () {
-                 DeleteUser(user.UserId);
-                    });
-
-                    actionCell.append(deleteButton);
-
-                    row.append(actionCell);
-                 tableBody.append(row);
-                row.append(actionCell);
-                tableBody.append(row);
+                else {
+                    standardUserCount++;
+                }
             });
-        },
 
-        error: function (xhr) {
-
-            console.log(xhr.responseText);
-
-            ShowPageMessage(
-                "Unable to load user accounts."
-            );
+            $("#totalUserCount").text(users.length);
+            $("#administratorCount").text(administratorCount);
+            $("#standardUserCount").text(standardUserCount);
         }
-    });
-}
+
         function PromoteUser(userId) {
 
-    if (!confirm("Promote this user to administrator?")) {
-        return;
-    }
+            if (!confirm("Promote this user to administrator?")) {
+                return;
+            }
 
-    var parameters = JSON.stringify({
-        userId: userId
-    });
+            var parameters = JSON.stringify({
+                userId: userId
+            });
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/PromoteUser",
-        data: parameters,
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/PromoteUser",
+                data: parameters,
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
+                success: function (msg) {
 
-            ShowPageMessage(msg.d);
-            LoadUsers();
-        },
+                    if (msg.d == "User promoted successfully.") {
+                        LoadUsers(msg.d);
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
 
-        error: function (xhr) {
+                error: function (xhr) {
 
-            console.log(xhr.responseText);
+                    console.log(xhr.responseText);
 
-            ShowPageMessage(
-                "Unable to promote the user."
-            );
+                    ShowPageMessage("Unable to promote the user.", "error");
+                }
+            });
         }
-    });
-}
-function DeleteUser(userId) {
+        function DeleteUser(userId) {
 
-    if (!confirm("Delete this user account? This cannot be undone.")) {
-        return;
-    }
+            if (!confirm("Delete this user account? This cannot be undone.")) {
+                return;
+            }
 
-    var parameters = JSON.stringify({
-        userId: userId
-    });
+            var parameters = JSON.stringify({
+                userId: userId
+            });
 
-    $.ajax({
-        type: "POST",
-        url: "ProjectServices.asmx/DeleteUser",
-        data: parameters,
-        contentType:
-            "application/json; charset=utf-8",
-        dataType: "json",
+            $.ajax({
+                type: "POST",
+                url: "ProjectServices.asmx/DeleteUser",
+                data: parameters,
+                contentType:
+                    "application/json; charset=utf-8",
+                dataType: "json",
 
-        success: function (msg) {
+                success: function (msg) {
 
-            ShowPageMessage(msg.d);
-            LoadUsers();
-        },
+                    if (msg.d == "User account deleted successfully.") {
+                        LoadUsers(msg.d);
+                    }
+                    else {
+                        ShowPageMessage(msg.d, "error");
+                    }
+                },
 
-        error: function (xhr) {
+                error: function (xhr) {
 
-            console.log(xhr.responseText);
+                    console.log(xhr.responseText);
 
-            ShowPageMessage(
-                "Unable to delete the user."
-            );
+                    ShowPageMessage("Unable to delete the user.", "error");
+                }
+            });
         }
-    });
-}
         function CheckAdminAccess() {
 
             $.ajax({
@@ -202,9 +241,7 @@ function DeleteUser(userId) {
 
                     if (userInfo == "Not Logged In") {
 
-                        ShowPageMessage(
-                            "You must be logged in."
-                        );
+                        ShowPageMessage("You must be logged in.", "error");
 
                         $("#usersSection").hide();
                         return;
@@ -217,96 +254,141 @@ function DeleteUser(userId) {
                         userParts[1].trim().toLowerCase() != "admin") {
 
                         ShowPageMessage(
-                            "Only administrators can view user accounts."
-                        );
+                            "Only administrators can view user accounts.", "error");
 
                         $("#usersSection").hide();
+                        return;
                     }
+
+                    $("#usersSection").show();
+                    LoadUsers();
+
                 },
 
                 error: function () {
 
                     ShowPageMessage(
-                        "Unable to verify administrator access."
-                    );
+                        "Unable to verify administrator access.", "error");
 
                     $("#usersSection").hide();
                 }
             });
         }
-
-        function ShowPageMessage(message) {
-
-            $("#pageMessage").text(message);
-        }
-
     </script>
 
     <style>
 
         .usersCard {
             padding: 32px 38px;
-            background-color: white;
-            border-radius: 9px;
-            box-shadow:
-                0 3px 12px rgba(0, 0, 0, 0.13);
         }
 
-        .pageHeading {
-            margin-bottom: 26px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #d8dee8;
-        }
-
-        .pageHeading h2 {
-            margin: 0 0 8px 0;
-            color: #0f172a;
-            font-size: 36px;
-        }
-
-        .pageHeading p {
-            margin: 0;
-            color: #64748b;
-        }
-
-        .toggleButtons {
+        .summaryCards {
             display: flex;
-            gap: 10px;
-            margin-bottom: 22px;
+            gap: 18px;
+            margin-bottom: 24px;
         }
 
-        .toggleButton {
-            padding: 10px 18px;
-            border: 1px solid #1f3c88;
-            border-radius: 6px;
+        .summaryCard {
+            min-width: 190px;
+            padding: 18px 22px;
+            border: 1px solid #d8dee8;
+            border-radius: 9px;
             background-color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .summaryLabel {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .summaryNumber {
+            display: block;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .totalUserNumber {
             color: #1f3c88;
+        }
+
+        .administratorNumber {
+            color: #7c3aed;
+        }
+
+        .standardUserNumber {
+            color: #15803d;
+        }
+        .userName {
+            color: #0f172a;
+            font-weight: bold;
+        }
+
+        .roleBadge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .adminBadge {
+            background-color: #ede9fe;
+            color: #7c3aed;
+        }
+
+        .userBadge {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .userActions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .promoteButton,
+        .deleteUserButton {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
         }
 
-        .toggleButton:hover {
-            background-color: #eef2f7;
-        }
-
-        .activeToggle {
+        .promoteButton {
+            border: 1px solid #1f3c88;
             background-color: #1f3c88;
             color: white;
         }
 
-        .placeholderMessage {
-            padding: 30px;
-            border-radius: 7px;
-            background-color: #f8fafc;
-            color: #64748b;
-            text-align: center;
-            font-weight: bold;
+        .promoteButton:hover {
+            background-color: #162f70;
         }
 
-        #pageMessage {
+        .deleteUserButton {
+            border: 1px solid #dc2626;
+            background-color: white;
             color: #dc2626;
+        }
+
+        .deleteUserButton:hover {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        #emptyUsersMessage {
+            display: none;
+            padding: 24px;
+            color: #64748b;
+            background-color: #f8fafc;
+            border-radius: 7px;
             text-align: center;
-            font-weight: bold;
         }
 
     </style>
@@ -360,7 +442,17 @@ function DeleteUser(userId) {
 
         </nav>
 
-        <main class="usersCard">
+        <main class="contentCard usersCard">
+
+            <div class="pageHeading adminPageHeading">
+
+                <h2>User Accounts</h2>
+
+                <p>
+                    View and manage registered user accounts.
+                </p>
+
+            </div>
 
             <div class="toggleButtons">
 
@@ -377,13 +469,25 @@ function DeleteUser(userId) {
 
             </div>
 
-            <div class="pageHeading">
+            <div class="summaryCards">
 
-                <h2>User Accounts</h2>
+                <div class="summaryCard">
+                    <span class="summaryLabel">Total Users</span>
+                    <span id="totalUserCount"
+                        class="summaryNumber totalUserNumber">0</span>
+                </div>
 
-                <p>
-                    View and manage registered user accounts.
-                </p>
+                <div class="summaryCard">
+                    <span class="summaryLabel">Administrators</span>
+                    <span id="administratorCount"
+                        class="summaryNumber administratorNumber">0</span>
+                </div>
+
+                <div class="summaryCard">
+                    <span class="summaryLabel">Standard Users</span>
+                    <span id="standardUserCount"
+                        class="summaryNumber standardUserNumber">0</span>
+                </div>
 
             </div>
 
@@ -393,28 +497,25 @@ function DeleteUser(userId) {
 
                 <div class="tableWrapper">
 
-                <table>
+                    <table class="dataTable">
 
-                <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
 
-            <tbody id="usersTableBody">
-            </tbody>
+                        <tbody id="usersTableBody"></tbody>
 
-            </table>
+                    </table>
 
-         </div>
+                </div>
 
-         <p id="emptyUsersMessage">
-         No user accounts were found.
-            </p>
+                 <p id="emptyUsersMessage"> No user accounts were found.</p>
 
             </section>
 
